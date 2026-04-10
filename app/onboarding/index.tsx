@@ -9,24 +9,10 @@ import * as Haptics from 'expo-haptics';
 import { useOnboarding } from '@/contexts/onboarding';
 import { useAppState } from '@/contexts/app-state';
 import { colors, fonts, spacing, radius } from '@/constants/theme';
+import { GlossyButton } from '@/components/glossy-button';
 import { WheelPicker } from '@/components/ui/wheel-picker';
 import { equipment as allEquipment } from '@/data/equipment';
 import type { UserGoal, ExperienceLevel } from '@/types';
-
-// ─── Flat Continue Button (Cal AI style) ────────────────────
-
-function ContinueButton({ disabled, onPress, label = 'Continue' }: {
-  disabled?: boolean; onPress: () => void; label?: string;
-}) {
-  return (
-    <Pressable
-      style={[styles.continueBtn, disabled && styles.continueBtnDisabled]}
-      onPress={onPress}
-      disabled={disabled}>
-      <Text style={[styles.continueBtnText, disabled && styles.continueBtnTextDisabled]}>{label}</Text>
-    </Pressable>
-  );
-}
 
 // ─── Option Card ────────────────────────────────────────────
 
@@ -273,11 +259,14 @@ export default function OnboardingScreen() {
       </ScrollView>
 
       {/* Fixed: Continue button */}
-      <ContinueButton
-        disabled={!canContinue}
-        onPress={next}
-        label={isLast ? 'Start training' : 'Continue'}
-      />
+      <View style={styles.buttonWrap}>
+        <GlossyButton
+          disabled={!canContinue}
+          onPress={next}
+          label={isLast ? 'Start training' : 'Continue'}
+          icon={isLast ? '→' : undefined}
+        />
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -297,26 +286,6 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: fonts.body, fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: spacing.md },
 
   body: { flex: 1, paddingTop: spacing.xl },
-
-  // Flat continue button (Cal AI style)
-  continueBtn: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: radius.full,
-    paddingVertical: 20,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  continueBtnDisabled: {
-    backgroundColor: '#E8E8E8',
-  },
-  continueBtnText: {
-    fontFamily: fonts.displayMedium,
-    fontSize: 17,
-    color: '#FFFFFF',
-  },
-  continueBtnTextDisabled: {
-    color: '#AAAAAA',
-  },
 
   // Option cards
   optionGroup: { gap: spacing.sm },
@@ -354,4 +323,6 @@ const styles = StyleSheet.create({
   assessGroup: { gap: spacing.lg },
   dipLabel: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.textSecondary },
   dipRow: { gap: spacing.sm },
+
+  buttonWrap: { paddingTop: spacing.md, paddingBottom: spacing.sm },
 });

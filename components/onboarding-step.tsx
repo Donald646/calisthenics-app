@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fonts, spacing, radius } from '@/constants/theme';
+import { colors, fonts, spacing } from '@/constants/theme';
+import { GlossyButton } from '@/components/glossy-button';
 import type { ReactNode } from 'react';
 
 const TOTAL_STEPS = 6;
@@ -39,12 +40,12 @@ export function OnboardingStep({
 
       <View style={styles.content}>{children}</View>
 
-      <Pressable
-        style={[styles.button, !canContinue && styles.buttonDisabled]}
+      <GlossyButton
+        label={buttonLabel}
+        icon="→"
         onPress={onContinue}
-        disabled={!canContinue}>
-        <Text style={[styles.buttonText, !canContinue && styles.buttonTextDisabled]}>{buttonLabel}</Text>
-      </Pressable>
+        disabled={!canContinue}
+      />
     </View>
   );
 }
@@ -61,8 +62,4 @@ const styles = StyleSheet.create({
   title: { fontFamily: fonts.display, fontSize: 32, color: colors.text, letterSpacing: -0.8, lineHeight: 36 },
   subtitle: { fontFamily: fonts.body, fontSize: 15, color: colors.textSecondary, marginTop: spacing.sm, lineHeight: 22 },
   content: { flex: 1 },
-  button: { backgroundColor: colors.buttonBg, borderRadius: radius.full, paddingVertical: 20, alignItems: 'center' },
-  buttonDisabled: { backgroundColor: colors.buttonDisabledBg },
-  buttonText: { fontFamily: fonts.displayMedium, fontSize: 17, color: colors.buttonText },
-  buttonTextDisabled: { color: colors.buttonDisabledText },
 });

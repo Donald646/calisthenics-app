@@ -3,12 +3,10 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { colors, fonts, spacing, radius } from '@/constants/theme';
+import { FilterChips } from '@/components/ui/filter-chips';
 import { sampleWorkouts, getWorkoutsByFocus } from '@/data/workouts';
-import type { WorkoutFocus } from '@/types';
 
-type FilterOption = 'all' | WorkoutFocus;
-
-const FILTERS: { key: FilterOption; label: string }[] = [
+const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'push', label: 'Push' },
   { key: 'pull', label: 'Pull' },
@@ -19,19 +17,15 @@ const FILTERS: { key: FilterOption; label: string }[] = [
 ];
 
 const LEVEL_LABELS: Record<number, string> = {
-  1: 'Beginner',
-  2: 'Foundation',
-  3: 'Intermediate',
-  4: 'Advanced',
-  5: 'Elite',
+  1: 'Beginner', 2: 'Foundation', 3: 'Intermediate', 4: 'Advanced', 5: 'Elite',
 };
 
 export default function LibraryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [activeFilter, setActiveFilter] = useState<FilterOption>('all');
+  const [active, setActive] = useState('all');
 
-  const workouts = getWorkoutsByFocus(activeFilter === 'all' ? undefined : activeFilter);
+  const workouts = getWorkoutsByFocus(active === 'all' ? undefined : active);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -40,34 +34,15 @@ export default function LibraryScreen() {
           <Text style={styles.title}>Library</Text>
         </View>
 
-        {/* Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filters}>
-          {FILTERS.map((f) => (
-            <Pressable
-              key={f.key}
-              style={[styles.chip, activeFilter === f.key && styles.chipActive]}
-              onPress={() => setActiveFilter(f.key)}>
-              <Text style={[styles.chipText, activeFilter === f.key && styles.chipTextActive]}>
-                {f.label}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={{ marginBottom: spacing.lg }}>
+          <FilterChips chips={FILTERS} activeKey={active} onSelect={setActive} />
+        </View>
 
-        {/* Workout list */}
         <View style={styles.list}>
           {workouts.map((w) => (
-            <Pressable
-              key={w.id}
-              style={styles.card}
-              onPress={() => router.push(`/workout/${w.id}`)}>
+            <Pressable key={w.id} style={styles.card} onPress={() => router.push(`/workout/${w.id}`)}>
               <View style={styles.cardTop}>
-                <Text style={styles.cardFocus}>
-                  {w.focus.replace('_', ' ').toUpperCase()}
-                </Text>
+                <Text style={styles.cardFocus}>{w.focus.replace('_', ' ').toUpperCase()}</Text>
                 <Text style={styles.cardLevel}>{LEVEL_LABELS[w.level]}</Text>
               </View>
               <Text style={styles.cardName}>{w.name}</Text>
@@ -92,91 +67,18 @@ export default function LibraryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    fontFamily: fonts.display,
-    fontSize: 32,
-    color: colors.text,
-    letterSpacing: -0.8,
-  },
-
-  filters: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  chip: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.bg,
-  },
-  chipActive: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
-  },
-  chipText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  chipTextActive: {
-    color: colors.bg,
-  },
-
-  list: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-  },
+  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md },
+  title: { fontFamily: fonts.display, fontSize: 32, color: colors.text, letterSpacing: -0.8 },
+  list: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  cardTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardFocus: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: colors.textMuted,
-  },
-  cardLevel: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  cardName: {
-    fontFamily: fonts.displayMedium,
-    fontSize: 22,
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  cardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  cardStat: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: colors.textMuted,
-  },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardFocus: { fontFamily: fonts.monoMedium, fontSize: 10, letterSpacing: 1.2, color: colors.textMuted },
+  cardLevel: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
+  cardName: { fontFamily: fonts.displayMedium, fontSize: 22, color: colors.text, letterSpacing: -0.5 },
+  cardBottom: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  cardStat: { fontFamily: fonts.body, fontSize: 13, color: colors.textSecondary },
+  dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: colors.textMuted },
 });

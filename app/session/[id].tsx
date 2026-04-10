@@ -8,7 +8,7 @@ import { GlossyButton } from '@/components/glossy-button';
 import { TimerRing } from '@/components/ui/timer-ring';
 import { SetDots } from '@/components/ui/set-dots';
 import { ProgressBar } from '@/components/ui/progress-bar';
-import { getWorkoutById } from '@/data/workouts';
+import { useAppState } from '@/contexts/app-state';
 import { getExerciseById } from '@/data/exercises';
 
 type Phase = 'exercise' | 'rest' | 'done';
@@ -17,7 +17,9 @@ export default function ActiveSessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const workout = getWorkoutById(id);
+  const { getWorkout, startSession, logSet, completeSession } = useAppState();
+  const workout = getWorkout(id);
+  const sessionStartRef = useRef(Date.now());
 
   const [exIdx, setExIdx] = useState(0);
   const [setIdx, setSetIdx] = useState(0);
@@ -58,6 +60,14 @@ export default function ActiveSessionScreen() {
 
   function advance() {
     if (!we || !workout) return;
+    // Log completed set
+    logSet(we.exerciseId, {
+      setNumber: setIdx + 1,
+      reps: we.reps,
+      holdSeconds: we.holdSeconds,
+      completed: true,
+    });
+
     if (setIdx + 1 < we.sets) {
       setSetIdx((s) => s + 1);
       setPhase('rest'); setTimer(0); setRunning(true);
@@ -65,8 +75,12 @@ export default function ActiveSessionScreen() {
       setExIdx((e) => e + 1); setSetIdx(0);
       setPhase('rest'); setTimer(0); setRunning(true);
     } else {
+      // Session complete — compute summary and navigate
+      const elapsed = Math.round((Date.now() - sessionStartRef.current) / 1000);
+      completeSession(workout.id, elapsed);
       setPhase('done'); setRunning(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace('/session/complete');
     }
   }
 
@@ -74,8 +88,8 @@ export default function ActiveSessionScreen() {
     return <View style={[styles.c, { paddingTop: insets.top }]}><Text>Not found</Text></View>;
   }
 
-  const totalSets = workout.exercises.reduce((s, e) => s + e.sets, 0);
-  const doneSets = workout.exercises.slice(0, exIdx).reduce((s, e) => s + e.sets, 0) + setIdx;
+  const totalSets = workout.exercises.reduce((s: number, e) => s + e.sets, 0);
+  const doneSets = workout.exercises.slice(0, exIdx).reduce((s: number, e) => s + e.sets, 0) + setIdx;
   const progress = totalSets > 0 ? doneSets / totalSets : 0;
   const ringProg = target > 0 ? 1 - timer / target : 0;
   const display = Math.max(0, target - timer);

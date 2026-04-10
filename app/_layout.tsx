@@ -9,6 +9,7 @@ import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold
 import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
 
 import { colors } from '@/constants/theme';
+import { AppStateProvider } from '@/contexts/app-state';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,7 +38,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <AppStateProvider>
       <Stack
         screenOptions={{
           headerShown: false,
@@ -56,8 +57,12 @@ export default function RootLayout() {
           name="session/[id]"
           options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
         />
+        <Stack.Screen
+          name="session/complete"
+          options={{ presentation: 'fullScreenModal', animation: 'fade' }}
+        />
       </Stack>
       <StatusBar style="dark" />
-    </>
+    </AppStateProvider>
   );
 }

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, radius } from '@/constants/theme';
 import { GlossyButton } from '@/components/glossy-button';
 import { ExerciseRow } from '@/components/ui/exercise-row';
-import { getWorkoutById } from '@/data/workouts';
+import { useAppState } from '@/contexts/app-state';
 import { getExerciseById } from '@/data/exercises';
 
 const LEVEL_LABELS = ['Beginner', 'Foundation', 'Intermediate', 'Advanced', 'Elite'];
@@ -13,7 +13,8 @@ export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const workout = getWorkoutById(id);
+  const { getWorkout } = useAppState();
+  const workout = getWorkout(id);
 
   if (!workout) {
     return (

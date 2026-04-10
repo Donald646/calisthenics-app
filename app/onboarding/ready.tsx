@@ -2,8 +2,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/contexts/onboarding';
+import { useAppState } from '@/contexts/app-state';
 import { colors, fonts, spacing } from '@/constants/theme';
-import type { MovementPattern, ProgressionLevel } from '@/types';
+import { GlossyButton } from '@/components/glossy-button';
+import type { ProgressionLevel } from '@/types';
 
 function deriveLevel(pushUps: number, pullUps: number, experience: string): ProgressionLevel {
   const avg = (pushUps + pullUps * 3) / 2; // pull-ups weighted heavier
@@ -33,6 +35,7 @@ export default function ReadyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data } = useOnboarding();
+  const { completeOnboarding } = useAppState();
 
   const pushUps = parseInt(data.maxPushUps, 10) || 0;
   const pullUps = parseInt(data.maxPullUps, 10) || 0;
@@ -83,14 +86,14 @@ export default function ReadyScreen() {
 
       <View style={{ flex: 1 }} />
 
-      <Pressable
-        style={styles.button}
+      <GlossyButton
+        label="Start training"
+        icon="→"
         onPress={() => {
-          // TODO: persist profile + generate plan
+          completeOnboarding(data);
           router.replace('/(tabs)');
-        }}>
-        <Text style={styles.buttonText}>Start training →</Text>
-      </Pressable>
+        }}
+      />
     </View>
   );
 }

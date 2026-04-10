@@ -2,37 +2,42 @@ import { createContext, useContext, useState, type ReactNode } from 'react';
 import type { EquipmentId, UserGoal, ExperienceLevel } from '@/types';
 
 export interface OnboardingData {
-  // Step 1: Basics
   name: string;
   age: string;
-  heightCm: string;
-  weightKg: string;
   sex: 'male' | 'female' | 'other' | '';
 
-  // Step 2: Goal
-  goal: UserGoal | '';
+  // Measurements
+  useMetric: boolean;
+  heightCm: string;
+  weightKg: string;
 
-  // Step 3: Equipment
+  // Goal + target
+  goal: UserGoal | '';
+  targetWeightKg: string;
+
+  // Equipment
   equipment: EquipmentId[];
 
-  // Step 4: Assessment
+  // Assessment
   maxPushUps: string;
   maxPullUps: string;
   maxSquatHoldSeconds: string;
   canDip: boolean | null;
   lSitHoldSeconds: string;
 
-  // Step 5: Experience
+  // Experience
   experience: ExperienceLevel | '';
 }
 
 const defaultData: OnboardingData = {
   name: '',
   age: '',
+  sex: '',
+  useMetric: true,
   heightCm: '',
   weightKg: '',
-  sex: '',
   goal: '',
+  targetWeightKg: '',
   equipment: [],
   maxPushUps: '',
   maxPullUps: '',

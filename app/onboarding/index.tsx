@@ -11,6 +11,7 @@ import { useAppState } from '@/contexts/app-state';
 import { colors, fonts, spacing, radius } from '@/constants/theme';
 import { GlossyButton } from '@/components/glossy-button';
 import { WheelPicker } from '@/components/ui/wheel-picker';
+import { RulerPicker } from '@/components/ui/ruler-picker';
 import { equipment as allEquipment } from '@/data/equipment';
 import type { UserGoal, ExperienceLevel } from '@/types';
 
@@ -262,17 +263,31 @@ export default function OnboardingScreen() {
               </View>
             )}
 
-            {/* 5: Target weight */}
+            {/* 5: Target weight — horizontal ruler */}
             {step === 5 && (
               <View style={styles.targetGroup}>
                 <Text style={styles.targetLabel}>
                   {data.goal === 'muscle' ? 'Gain muscle' : data.goal === 'strength' ? 'Get stronger' : 'Target'}
                 </Text>
                 <Text style={styles.targetValue}>
-                  {metric ? `${data.targetWeightKg || data.weightKg || '70'} kg` : `${kgToLbs(parseInt(data.targetWeightKg || data.weightKg || '70', 10))} lbs`}
+                  {metric
+                    ? `${data.targetWeightKg || data.weightKg || '70'} kg`
+                    : `${kgToLbs(parseInt(data.targetWeightKg || data.weightKg || '70', 10))} lbs`}
                 </Text>
-                <WheelPicker items={weights} selectedIndex={targetIdx}
-                  onSelect={handleTargetSelect} suffix={wSuffix} />
+                <RulerPicker
+                  min={metric ? 30 : 66}
+                  max={metric ? 150 : 330}
+                  value={metric
+                    ? parseInt(data.targetWeightKg || data.weightKg || '70', 10)
+                    : kgToLbs(parseInt(data.targetWeightKg || data.weightKg || '70', 10))}
+                  onValueChange={(v) => {
+                    if (metric) {
+                      update({ targetWeightKg: String(v) });
+                    } else {
+                      update({ targetWeightKg: String(lbsToKg(v)) });
+                    }
+                  }}
+                />
               </View>
             )}
 

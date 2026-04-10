@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView, Platform, Pressable, ScrollView,
+  Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -82,6 +82,19 @@ export default function OnboardingScreen() {
   const current = STEPS[step];
   const isLast = step === TOTAL_STEPS - 1;
   const canContinue = current.canContinue(data);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  function animateTransition(direction: 'forward' | 'back', cb: () => void) {
+    const from = direction === 'forward' ? 80 : -80;
+    slideAnim.setValue(from);
+    cb();
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      tension: 80,
+      friction: 12,
+      useNativeDriver: true,
+    }).start();
+  }
 
   function next() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -89,12 +102,14 @@ export default function OnboardingScreen() {
       completeOnboarding(data);
       router.replace('/(tabs)');
     } else {
-      setStep((s) => s + 1);
+      animateTransition('forward', () => setStep((s) => s + 1));
     }
   }
 
   function back() {
-    if (step > 0) setStep((s) => s - 1);
+    if (step > 0) {
+      animateTransition('back', () => setStep((s) => s - 1));
+    }
   }
 
   // Picker helpers
@@ -121,17 +136,17 @@ export default function OnboardingScreen() {
         </View>
       </View>
 
-      {/* Swappable content */}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollInner}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
+      {/* Swappable content — slides on step change */}
+      <Animated.View style={[styles.scroll, { transform: [{ translateX: slideAnim }] }]}>
+        <ScrollView
+          contentContainerStyle={styles.scrollInner}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
 
-        <Text style={styles.title}>{current.title}</Text>
-        {current.subtitle && <Text style={styles.subtitle}>{current.subtitle}</Text>}
+          <Text style={styles.title}>{current.title}</Text>
+          {current.subtitle && <Text style={styles.subtitle}>{current.subtitle}</Text>}
 
-        <View style={styles.body}>
+          <View style={styles.body}>
           {/* Step 0: Gender */}
           {step === 0 && (
             <View style={styles.optionGroup}>
@@ -256,7 +271,8 @@ export default function OnboardingScreen() {
             </View>
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </Animated.View>
 
       {/* Fixed: Continue button */}
       <View style={styles.buttonWrap}>
@@ -324,5 +340,5 @@ const styles = StyleSheet.create({
   dipLabel: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.textSecondary },
   dipRow: { gap: spacing.sm },
 
-  buttonWrap: { paddingTop: spacing.md, paddingBottom: spacing.sm },
+  buttonWrap: { paddingTop: spacing.md, paddingBottom: spacing.lg },
 });

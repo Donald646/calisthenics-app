@@ -15,40 +15,40 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.bg,
           borderTopColor: colors.border,
+          borderTopWidth: 1,
+          elevation: 0,
         },
         tabBarLabelStyle: {
-          fontFamily: fonts.monoMedium,
+          fontFamily: fonts.bodyMedium,
           fontSize: 10,
-          letterSpacing: 0.5,
-          textTransform: 'uppercase',
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: 'Today',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="house.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="plan"
         options={{
-          title: 'Plan',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="calendar" color={color} />,
+          title: 'Library',
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="calendar" color={color} />,
         }}
       />
       <Tabs.Screen
         name="body"
         options={{
           title: 'Body',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="figure.stand" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="figure.stand" color={color} />,
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
           title: 'Stats',
-          tabBarIcon: ({ color }) => <IconSymbol size={24} name="chart.bar.fill" color={color} />,
+          tabBarIcon: ({ color }) => <IconSymbol size={22} name="chart.bar.fill" color={color} />,
         }}
       />
     </Tabs>

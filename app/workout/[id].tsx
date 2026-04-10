@@ -5,117 +5,81 @@ import { colors, fonts, spacing, radius } from '@/constants/theme';
 import { getWorkoutById } from '@/data/workouts';
 import { getExerciseById } from '@/data/exercises';
 
-const FOCUS_LABELS: Record<string, string> = {
-  push: 'PUSH',
-  pull: 'PULL',
-  legs: 'LEGS',
-  full_body: 'FULL BODY',
-  core: 'CORE',
-  skills: 'SKILLS',
-  mobility: 'MOBILITY',
-};
-
-const LEVEL_LABELS: Record<number, string> = {
-  1: 'Beginner',
-  2: 'Developing',
-  3: 'Intermediate',
-  4: 'Advanced',
-  5: 'Elite',
-};
-
 export default function WorkoutDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
   const workout = getWorkoutById(id);
+
   if (!workout) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Text style={styles.errorText}>Workout not found</Text>
+        <Text style={{ color: colors.textMuted, padding: 24 }}>Workout not found</Text>
       </View>
     );
   }
 
-  const totalSets = workout.exercises.reduce((sum, e) => sum + e.sets, 0);
-
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {/* Nav bar */}
-        <View style={styles.navBar}>
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.backText}>← BACK</Text>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Nav */}
+        <View style={styles.nav}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backText}>‹</Text>
           </Pressable>
-          <Text style={styles.navLabel}>
-            W3 · D2 · {FOCUS_LABELS[workout.focus] || workout.focus}
-          </Text>
-          <Text style={styles.heartIcon}>♡</Text>
+          <Pressable>
+            <Text style={styles.heartText}>♡</Text>
+          </Pressable>
         </View>
 
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.protocolLabel}>PROTOCOL 03</Text>
-          <Text style={styles.title}>{workout.name}.</Text>
-          <Text style={styles.description}>
-            Static strength protocol. Build the scapular strength needed for your next progression.
-          </Text>
-        </View>
+        <Text style={styles.tag}>
+          {workout.focus.replace('_', ' ').toUpperCase()} · {
+            ['Beginner', 'Foundation', 'Intermediate', 'Advanced', 'Elite'][workout.level - 1]
+          }
+        </Text>
+        <Text style={styles.title}>{workout.name}</Text>
+        <Text style={styles.desc}>
+          Build the strength and control needed for your next progression level.
+        </Text>
 
-        {/* Stats row */}
+        {/* Stats */}
         <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>TIME</Text>
-            <Text style={styles.statValue}>{workout.estimatedMinutes} MIN</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>MOVES</Text>
-            <Text style={styles.statValue}>
-              {String(workout.exercises.length).padStart(2, '0')}
-            </Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>BURN</Text>
-            <Text style={styles.statValue}>{Math.round(workout.estimatedMinutes * 7.5)}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statLabel}>LVL</Text>
-            <Text style={styles.statValue}>
-              {LEVEL_LABELS[workout.level]?.substring(0, 3).toUpperCase() || workout.level}
-            </Text>
-          </View>
+          {[
+            { v: `${workout.estimatedMinutes}`, l: 'min' },
+            { v: `${workout.exercises.length}`, l: 'exercises' },
+            { v: `${Math.round(workout.estimatedMinutes * 7.5)}`, l: 'kcal' },
+          ].map((s, i) => (
+            <View key={i} style={styles.stat}>
+              <Text style={styles.statVal}>{s.v}</Text>
+              <Text style={styles.statLabel}>{s.l}</Text>
+            </View>
+          ))}
         </View>
 
-        {/* Movements header */}
-        <View style={styles.movementsHeader}>
-          <Text style={styles.movementsTitle}>Movements</Text>
-          <Text style={styles.movementsCount}>
-            01 — {String(workout.exercises.length).padStart(2, '0')}
-          </Text>
-        </View>
+        {/* Exercises */}
+        <Text style={styles.movementsTitle}>
+          Exercises
+          <Text style={styles.movementsCount}> · {workout.exercises.length}</Text>
+        </Text>
 
-        {/* Exercise list */}
-        {workout.exercises.map((we, index) => {
-          const exercise = getExerciseById(we.exerciseId);
-          if (!exercise) return null;
-
+        {workout.exercises.map((we, i) => {
+          const ex = getExerciseById(we.exerciseId);
+          if (!ex) return null;
           const detail = we.holdSeconds
-            ? `${we.sets} × ${we.holdSeconds}S HOLD`
-            : `${we.sets} × ${we.reps} REPS`;
+            ? `${we.sets} × ${we.holdSeconds}s hold`
+            : `${we.sets} × ${we.reps} reps`;
 
           return (
             <View key={we.exerciseId} style={styles.exerciseRow}>
-              <Text style={styles.exerciseIndex}>
-                {String(index + 1).padStart(2, '0')}
-              </Text>
-              <View style={styles.exerciseInfo}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Text style={styles.exerciseMeta}>
-                  {detail} · {we.restSeconds}S REST
-                  {we.tempo ? ` · TEMPO ${we.tempo}` : ''}
+              <View style={styles.exNumCircle}>
+                <Text style={styles.exNum}>{String(i + 1).padStart(2, '0')}</Text>
+              </View>
+              <View style={styles.exInfo}>
+                <Text style={styles.exName}>{ex.name}</Text>
+                <Text style={styles.exDetail}>
+                  {detail} · {we.restSeconds}s rest
+                  {we.tempo ? ` · ${we.tempo}` : ''}
                 </Text>
               </View>
               <Text style={styles.chevron}>›</Text>
@@ -123,205 +87,189 @@ export default function WorkoutDetailScreen() {
           );
         })}
 
-        {/* Spacer for bottom button */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Fixed bottom CTA */}
-      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
-        <View style={styles.bottomMeta}>
-          <Text style={styles.bottomLabel}>READY WHEN YOU ARE</Text>
-          <Text style={styles.bottomTitle}>Begin session</Text>
-        </View>
+      {/* Fixed bottom — premium black button */}
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
-          style={styles.playButton}
+          style={styles.beginButton}
           onPress={() => router.push(`/session/${workout.id}`)}>
-          <Text style={styles.playIcon}>▶</Text>
+          <Text style={styles.beginText}>Begin session</Text>
+          <View style={styles.beginArrow}>
+            <Text style={styles.beginArrowText}>▶</Text>
+          </View>
         </Pressable>
+        <Text style={styles.bottomMeta}>
+          Estimated {workout.estimatedMinutes} min · {Math.round(workout.estimatedMinutes * 7.5)} kcal
+        </Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  scroll: {
-    padding: spacing.lg,
-  },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: 16,
-    color: colors.textSecondary,
-    padding: spacing.lg,
-  },
-  navBar: {
+  container: { flex: 1, backgroundColor: colors.bg },
+  scroll: { paddingHorizontal: spacing.lg },
+
+  nav: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    paddingVertical: spacing.md,
   },
-  backText: {
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backText: { fontSize: 22, color: colors.text, marginTop: -2 },
+  heartText: { fontSize: 24, color: colors.text },
+
+  tag: {
     fontFamily: fonts.monoMedium,
-    fontSize: 12,
-    letterSpacing: 1,
-    color: colors.text,
-  },
-  navLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: colors.textSecondary,
-  },
-  heartIcon: {
-    fontSize: 22,
-    color: colors.text,
-  },
-  header: {
-    marginBottom: spacing.xl,
-  },
-  protocolLabel: {
-    fontFamily: fonts.mono,
     fontSize: 10,
     letterSpacing: 1.5,
-    color: colors.textSecondary,
+    color: colors.textMuted,
     marginBottom: spacing.sm,
+    marginTop: spacing.sm,
   },
   title: {
     fontFamily: fonts.display,
-    fontSize: 42,
+    fontSize: 38,
     color: colors.text,
-    letterSpacing: -1.5,
-    lineHeight: 46,
+    letterSpacing: -1.2,
+    lineHeight: 42,
     marginBottom: spacing.md,
   },
-  description: {
+  desc: {
     fontFamily: fonts.body,
     fontSize: 15,
     color: colors.textSecondary,
     lineHeight: 22,
+    marginBottom: spacing.xl,
   },
+
   statsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     marginBottom: spacing.xl,
-    paddingVertical: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
+    gap: spacing.xl,
   },
-  statItem: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  statDivider: {
-    width: StyleSheet.hairlineWidth,
-    height: 32,
-    backgroundColor: colors.border,
+  stat: { gap: 2 },
+  statVal: {
+    fontFamily: fonts.display,
+    fontSize: 24,
+    color: colors.text,
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1.2,
-    color: colors.textSecondary,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.textMuted,
   },
-  statValue: {
+
+  movementsTitle: {
     fontFamily: fonts.displayMedium,
     fontSize: 18,
     color: colors.text,
-  },
-  movementsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
     marginBottom: spacing.md,
   },
-  movementsTitle: {
-    fontFamily: fonts.displayRegular,
-    fontSize: 18,
-    color: colors.text,
-  },
   movementsCount: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textSecondary,
+    fontFamily: fonts.body,
+    color: colors.textMuted,
   },
+
   exerciseRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     gap: spacing.md,
   },
-  exerciseIndex: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    color: colors.accent,
-    width: 24,
+  exNumCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  exerciseInfo: {
-    flex: 1,
-    gap: 3,
+  exNum: {
+    fontFamily: fonts.monoMedium,
+    fontSize: 12,
+    color: colors.textMuted,
   },
-  exerciseName: {
+  exInfo: { flex: 1, gap: 2 },
+  exName: {
     fontFamily: fonts.bodyMedium,
-    fontSize: 15,
+    fontSize: 16,
     color: colors.text,
   },
-  exerciseMeta: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 0.5,
-    color: colors.textSecondary,
+  exDetail: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.textMuted,
   },
   chevron: {
-    fontFamily: fonts.body,
     fontSize: 22,
     color: colors.textMuted,
   },
-  bottomBar: {
+
+  // Bottom CTA — thick premium black pill
+  bottom: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    backgroundColor: colors.bg,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  beginButton: {
+    backgroundColor: colors.buttonBg,
+    borderRadius: radius.full,
+    paddingVertical: 20,
+    paddingHorizontal: spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.dark,
-    paddingHorizontal: spacing.lg,
-    paddingTop: 20,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
+    justifyContent: 'center',
+    gap: spacing.md,
+    width: '100%',
   },
-  bottomMeta: {
-    gap: 4,
-  },
-  bottomLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1.2,
-    color: colors.textMuted,
-  },
-  bottomTitle: {
-    fontFamily: fonts.bodyMedium,
+  beginText: {
+    fontFamily: fonts.displayMedium,
     fontSize: 18,
-    color: colors.bg,
+    color: colors.buttonText,
   },
-  playButton: {
-    width: 52,
-    height: 52,
+  beginArrow: {
+    width: 32,
+    height: 32,
     borderRadius: 999,
-    backgroundColor: colors.bg,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  playIcon: {
-    fontSize: 18,
-    color: colors.dark,
-    marginLeft: 3,
+  beginArrowText: {
+    fontSize: 13,
+    color: colors.buttonText,
+    marginLeft: 2,
+  },
+  bottomMeta: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.textMuted,
+    marginBottom: spacing.xs,
   },
 });

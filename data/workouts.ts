@@ -172,8 +172,134 @@ export const sampleWorkouts: Workout[] = [
       },
     ],
   },
+
+  // ── Additional library workouts ──────────────────────────────
+  {
+    id: 'push_beg_01',
+    name: 'Push Foundations',
+    focus: 'push',
+    level: 1,
+    equipment: ['none'],
+    estimatedMinutes: 28,
+    exercises: [
+      { exerciseId: 'incline_pushup', sets: 4, reps: 12, restSeconds: 60 },
+      { exerciseId: 'wall_pushup', sets: 3, reps: 15, restSeconds: 45 },
+      { exerciseId: 'pike_pushup', sets: 3, reps: 8, restSeconds: 60 },
+      { exerciseId: 'plank', sets: 3, holdSeconds: 30, restSeconds: 45 },
+    ],
+  },
+  {
+    id: 'push_adv_01',
+    name: 'Handstand Protocol',
+    focus: 'push',
+    level: 5,
+    equipment: ['none'],
+    estimatedMinutes: 55,
+    exercises: [
+      { exerciseId: 'wall_handstand', sets: 5, holdSeconds: 30, restSeconds: 90 },
+      { exerciseId: 'wall_hspu', sets: 4, reps: 5, restSeconds: 120, tempo: '3-1-1' },
+      { exerciseId: 'free_hspu', sets: 3, reps: 3, restSeconds: 180 },
+      { exerciseId: 'pseudo_planche_pushup', sets: 4, reps: 6, restSeconds: 90 },
+      { exerciseId: 'diamond_pushup', sets: 3, reps: 10, restSeconds: 60 },
+    ],
+  },
+  {
+    id: 'pull_beg_01',
+    name: 'Pull Foundations',
+    focus: 'pull',
+    level: 1,
+    equipment: ['pull_up_bar'],
+    estimatedMinutes: 30,
+    exercises: [
+      { exerciseId: 'dead_hang', sets: 4, holdSeconds: 20, restSeconds: 60 },
+      { exerciseId: 'scapular_pull', sets: 3, reps: 12, restSeconds: 60 },
+      { exerciseId: 'negative_pullup', sets: 4, reps: 5, restSeconds: 90 },
+      { exerciseId: 'incline_row', sets: 3, reps: 10, restSeconds: 60 },
+    ],
+  },
+  {
+    id: 'pull_adv_01',
+    name: 'Muscle-Up Protocol',
+    focus: 'pull',
+    level: 5,
+    equipment: ['pull_up_bar'],
+    estimatedMinutes: 48,
+    exercises: [
+      { exerciseId: 'muscle_up', sets: 5, reps: 3, restSeconds: 180 },
+      { exerciseId: 'weighted_pullup', sets: 4, reps: 5, restSeconds: 150, tempo: '3-1-1' },
+      { exerciseId: 'chest_to_bar_pullup', sets: 4, reps: 6, restSeconds: 120 },
+      { exerciseId: 'muscle_up_negative', sets: 3, reps: 4, restSeconds: 120 },
+      { exerciseId: 'front_lever_row', sets: 3, reps: 5, restSeconds: 150 },
+    ],
+  },
+  {
+    id: 'core_int_01',
+    name: 'Core Control',
+    focus: 'core',
+    level: 3,
+    equipment: ['pull_up_bar'],
+    estimatedMinutes: 35,
+    exercises: [
+      { exerciseId: 'hanging_leg_raise', sets: 4, reps: 10, restSeconds: 60 },
+      { exerciseId: 'hollow_body_hold', sets: 4, holdSeconds: 30, restSeconds: 45 },
+      { exerciseId: 'dragon_flag', sets: 3, reps: 5, restSeconds: 90 },
+      { exerciseId: 'plank', sets: 3, holdSeconds: 60, restSeconds: 45 },
+      { exerciseId: 'dead_bug', sets: 3, reps: 12, restSeconds: 45 },
+    ],
+  },
+  {
+    id: 'skills_int_01',
+    name: 'Skill Builder',
+    focus: 'skills',
+    level: 3,
+    equipment: ['parallettes'],
+    estimatedMinutes: 50,
+    exercises: [
+      { exerciseId: 'l_sit', sets: 5, holdSeconds: 10, restSeconds: 90 },
+      { exerciseId: 'tuck_planche', sets: 5, holdSeconds: 10, restSeconds: 120 },
+      { exerciseId: 'crow_pose', sets: 4, holdSeconds: 15, restSeconds: 90 },
+      { exerciseId: 'wall_handstand', sets: 4, holdSeconds: 30, restSeconds: 90 },
+      { exerciseId: 'l_sit_tuck', sets: 3, holdSeconds: 15, restSeconds: 60 },
+    ],
+  },
+  {
+    id: 'legs_beg_01',
+    name: 'Lower Body Basics',
+    focus: 'legs',
+    level: 1,
+    equipment: ['none'],
+    estimatedMinutes: 30,
+    exercises: [
+      { exerciseId: 'bodyweight_squat', sets: 4, reps: 20, restSeconds: 60 },
+      { exerciseId: 'glute_bridge', sets: 3, reps: 15, restSeconds: 45 },
+      { exerciseId: 'single_leg_bridge', sets: 3, reps: 10, restSeconds: 45 },
+      { exerciseId: 'calf_raise', sets: 3, reps: 15, restSeconds: 45 },
+      { exerciseId: 'back_extension', sets: 3, holdSeconds: 20, restSeconds: 45 },
+    ],
+  },
+  {
+    id: 'full_int_01',
+    name: 'Full Body Circuit',
+    focus: 'full_body',
+    level: 2,
+    equipment: ['pull_up_bar'],
+    estimatedMinutes: 45,
+    exercises: [
+      { exerciseId: 'pullup', sets: 4, reps: 6, restSeconds: 90 },
+      { exerciseId: 'pushup', sets: 4, reps: 12, restSeconds: 60 },
+      { exerciseId: 'bodyweight_squat', sets: 3, reps: 20, restSeconds: 60 },
+      { exerciseId: 'hanging_knee_raise', sets: 3, reps: 12, restSeconds: 60 },
+      { exerciseId: 'body_row', sets: 3, reps: 10, restSeconds: 60 },
+      { exerciseId: 'plank', sets: 3, holdSeconds: 45, restSeconds: 45 },
+    ],
+  },
 ];
 
 export function getWorkoutById(id: string): Workout | undefined {
   return sampleWorkouts.find((w) => w.id === id);
+}
+
+export function getWorkoutsByFocus(focus?: string): Workout[] {
+  if (!focus || focus === 'all') return sampleWorkouts;
+  return sampleWorkouts.filter((w) => w.focus === focus);
 }

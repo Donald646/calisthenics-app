@@ -5,10 +5,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { InterTight_400Regular, InterTight_500Medium, InterTight_600SemiBold } from '@expo-google-fonts/inter-tight';
-import { InstrumentSerif_400Regular, InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
+import { DMSans_400Regular, DMSans_500Medium, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { JetBrainsMono_400Regular, JetBrainsMono_500Medium } from '@expo-google-fonts/jetbrains-mono';
-import { HostGrotesk_500Medium, HostGrotesk_600SemiBold, HostGrotesk_700Bold } from '@expo-google-fonts/host-grotesk';
 
 import { colors } from '@/constants/theme';
 
@@ -20,16 +18,12 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    InterTight_400Regular,
-    InterTight_500Medium,
-    InterTight_600SemiBold,
-    InstrumentSerif_400Regular,
-    InstrumentSerif_400Regular_Italic,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
     JetBrainsMono_400Regular,
     JetBrainsMono_500Medium,
-    HostGrotesk_500Medium,
-    HostGrotesk_600SemiBold,
-    HostGrotesk_700Bold,
   });
 
   useEffect(() => {

@@ -1,261 +1,187 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, radius } from '@/constants/theme';
 import { getWorkoutById } from '@/data/workouts';
 import { getExerciseById } from '@/data/exercises';
 
-type SessionPhase = 'exercise' | 'rest' | 'done';
+type Phase = 'exercise' | 'rest' | 'done';
+
+const RING = 240;
+const STROKE = 6;
+const R = (RING - STROKE) / 2;
+const CIRC = 2 * Math.PI * R;
+
+function Ring({ progress, color }: { progress: number; color: string }) {
+  return (
+    <Svg width={RING} height={RING} style={{ transform: [{ rotate: '-90deg' }] }}>
+      <Circle cx={RING / 2} cy={RING / 2} r={R} stroke={colors.border} strokeWidth={STROKE} fill="none" />
+      <Circle
+        cx={RING / 2} cy={RING / 2} r={R}
+        stroke={color} strokeWidth={STROKE} fill="none"
+        strokeDasharray={CIRC}
+        strokeDashoffset={CIRC * (1 - Math.max(0, Math.min(1, progress)))}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 
 export default function ActiveSessionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
   const workout = getWorkoutById(id);
-  const [exerciseIdx, setExerciseIdx] = useState(0);
+
+  const [exIdx, setExIdx] = useState(0);
   const [setIdx, setSetIdx] = useState(0);
-  const [phase, setPhase] = useState<SessionPhase>('exercise');
+  const [phase, setPhase] = useState<Phase>('exercise');
   const [timer, setTimer] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [running, setRunning] = useState(false);
+  const ref = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const currentWe = workout?.exercises[exerciseIdx];
-  const currentExercise = currentWe ? getExerciseById(currentWe.exerciseId) : undefined;
-  const isHold = currentExercise?.mode === 'hold';
-  const targetTime = currentWe?.holdSeconds || 0;
-  const totalExercises = workout?.exercises.length || 0;
+  const we = workout?.exercises[exIdx];
+  const ex = we ? getExerciseById(we.exerciseId) : undefined;
+  const isHold = ex?.mode === 'hold';
+  const target = phase === 'rest' ? (we?.restSeconds || 60) : (we?.holdSeconds || 0);
+  const total = workout?.exercises.length || 0;
 
-  // Timer logic
   useEffect(() => {
-    if (isRunning) {
-      intervalRef.current = setInterval(() => {
-        setTimer((t) => t + 1);
-      }, 1000);
-    } else if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isRunning]);
+    if (running) {
+      ref.current = setInterval(() => setTimer((t) => t + 1), 1000);
+    } else if (ref.current) clearInterval(ref.current);
+    return () => { if (ref.current) clearInterval(ref.current); };
+  }, [running]);
 
-  // Check if hold timer completed
   useEffect(() => {
-    if (phase === 'exercise' && isHold && timer >= targetTime && targetTime > 0) {
-      setIsRunning(false);
+    if (phase === 'exercise' && isHold && timer >= target && target > 0) {
+      setRunning(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      advanceSet();
+      advance();
     }
-  }, [timer, phase, isHold, targetTime]);
+  }, [timer]);
 
-  // Check if rest timer completed
   useEffect(() => {
-    if (phase === 'rest' && currentWe && timer >= currentWe.restSeconds) {
-      setIsRunning(false);
+    if (phase === 'rest' && timer >= target) {
+      setRunning(false);
       setPhase('exercise');
       setTimer(0);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     }
-  }, [timer, phase, currentWe]);
+  }, [timer]);
 
-  function advanceSet() {
-    if (!currentWe || !workout) return;
-
-    if (setIdx + 1 < currentWe.sets) {
-      // More sets — go to rest
+  function advance() {
+    if (!we || !workout) return;
+    if (setIdx + 1 < we.sets) {
       setSetIdx((s) => s + 1);
-      setPhase('rest');
-      setTimer(0);
-      setIsRunning(true);
-    } else if (exerciseIdx + 1 < totalExercises) {
-      // Next exercise
-      setExerciseIdx((e) => e + 1);
+      setPhase('rest'); setTimer(0); setRunning(true);
+    } else if (exIdx + 1 < total) {
+      setExIdx((e) => e + 1);
       setSetIdx(0);
-      setPhase('rest');
-      setTimer(0);
-      setIsRunning(true);
+      setPhase('rest'); setTimer(0); setRunning(true);
     } else {
-      // Workout complete
-      setPhase('done');
-      setIsRunning(false);
+      setPhase('done'); setRunning(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   }
 
-  function handleMainAction() {
-    if (phase === 'done') {
-      router.back();
-      return;
-    }
-
-    if (phase === 'exercise') {
-      if (isHold) {
-        // Start/pause hold timer
-        setIsRunning((r) => !r);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } else {
-        // Rep-based — mark set complete
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        advanceSet();
-      }
-    } else if (phase === 'rest') {
-      // Skip rest
-      setIsRunning(false);
-      setPhase('exercise');
-      setTimer(0);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+  if (!workout || !ex || !we) {
+    return <View style={[styles.c, { paddingTop: insets.top }]}><Text>Not found</Text></View>;
   }
 
-  if (!workout || !currentExercise || !currentWe) {
-    return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <Text style={styles.errorText}>Workout not found</Text>
-      </View>
-    );
-  }
-
-  // Progress segments
-  const totalSegments = workout.exercises.reduce((s, e) => s + e.sets, 0);
-  const completedSegments =
-    workout.exercises.slice(0, exerciseIdx).reduce((s, e) => s + e.sets, 0) + setIdx;
-
-  const displayTime = phase === 'rest'
-    ? Math.max(0, currentWe.restSeconds - timer)
-    : isHold
-      ? Math.max(0, targetTime - timer)
-      : timer;
-
-  const nextExercise =
-    exerciseIdx + 1 < totalExercises
-      ? getExerciseById(workout.exercises[exerciseIdx + 1].exerciseId)
-      : null;
+  const totalSets = workout.exercises.reduce((s, e) => s + e.sets, 0);
+  const doneSets = workout.exercises.slice(0, exIdx).reduce((s, e) => s + e.sets, 0) + setIdx;
+  const progress = totalSets > 0 ? doneSets / totalSets : 0;
+  const ringProg = target > 0 ? 1 - timer / target : 0;
+  const display = Math.max(0, target - timer);
+  const next = exIdx + 1 < total ? getExerciseById(workout.exercises[exIdx + 1].exerciseId) : null;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + 16 }]}>
-      {/* Top bar */}
-      <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.endText}>✕ END</Text>
+    <View style={[styles.c, { paddingTop: insets.top, paddingBottom: insets.bottom + 16 }]}>
+      {/* Top */}
+      <View style={styles.top}>
+        <Pressable style={styles.endBtn} onPress={() => router.back()}>
+          <Text style={styles.endText}>✕</Text>
         </Pressable>
-        <Text style={styles.progressText}>
-          {String(exerciseIdx + 1).padStart(2, '0')} / {String(totalExercises).padStart(2, '0')} · SET {setIdx + 1} / {currentWe.sets}
-        </Text>
-        <Text style={styles.logText}>LOG ✎</Text>
+        <Text style={styles.topTitle} numberOfLines={1}>{workout.name}</Text>
+        <Text style={styles.topCount}>{exIdx + 1}/{total}</Text>
       </View>
 
       {/* Progress bar */}
-      <View style={styles.progressBar}>
-        {Array.from({ length: totalSegments }).map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.progressSegment,
-              i < completedSegments
-                ? styles.segmentDone
-                : i === completedSegments
-                  ? styles.segmentActive
-                  : styles.segmentPending,
-            ]}
-          />
-        ))}
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
 
       {/* Main content */}
-      <View style={styles.mainContent}>
+      <View style={styles.main}>
         {phase === 'done' ? (
           <>
-            <Text style={styles.phaseLabel}>COMPLETE</Text>
-            <Text style={styles.doneTitle}>Session{'\n'}finished.</Text>
-          </>
-        ) : phase === 'rest' ? (
-          <>
-            <Text style={styles.phaseLabel}>REST</Text>
-            <Text style={styles.exerciseTitle}>Breathe</Text>
-            <Text style={styles.bigNumber}>{displayTime}</Text>
-            <Text style={styles.unitLabel}>seconds</Text>
+            <Text style={styles.doneTitle}>Session{'\n'}complete.</Text>
+            <Text style={styles.doneSub}>{totalSets} sets across {total} exercises</Text>
           </>
         ) : (
           <>
-            <Text style={styles.phaseLabel}>{isHold ? 'HOLD' : 'REPS'}</Text>
-            <Text style={styles.exerciseTitle}>{currentExercise.name}</Text>
-            {isHold ? (
-              <>
-                <Text style={styles.bigNumber}>{displayTime}</Text>
-                <Text style={styles.unitLabel}>seconds</Text>
-              </>
+            <Text style={styles.phaseTag}>
+              {phase === 'rest' ? 'REST' : isHold ? 'HOLD' : `SET ${setIdx + 1} OF ${we.sets}`}
+            </Text>
+            <Text style={styles.exName}>{phase === 'rest' ? 'Rest' : ex.name}</Text>
+
+            {/* Ring or reps */}
+            {(phase === 'rest' || isHold) ? (
+              <View style={styles.ringWrap}>
+                <Ring progress={ringProg} color={phase === 'rest' ? colors.textMuted : colors.text} />
+                <View style={styles.ringInner}>
+                  <Text style={styles.bigNum}>{display}</Text>
+                  <Text style={styles.bigUnit}>{phase === 'rest' ? 'sec' : 'sec'}</Text>
+                </View>
+              </View>
             ) : (
-              <>
-                <Text style={styles.bigNumber}>{currentWe.reps}</Text>
-                <Text style={styles.unitLabel}>reps</Text>
-              </>
+              <View style={styles.repWrap}>
+                <Text style={styles.bigNum}>{we.reps}</Text>
+                <Text style={styles.bigUnit}>reps</Text>
+              </View>
             )}
+
+            {/* Set dots */}
+            <View style={styles.dots}>
+              {Array.from({ length: we.sets }).map((_, i) => (
+                <View key={i} style={[
+                  styles.dot,
+                  i < setIdx ? styles.dotDone : i === setIdx ? styles.dotCurrent : styles.dotPending
+                ]} />
+              ))}
+            </View>
           </>
         )}
       </View>
 
-      {/* Set info */}
-      {phase !== 'done' && (
-        <Text style={styles.setInfo}>
-          SET {String(setIdx + 1).padStart(2, '0')} / {String(currentWe.sets).padStart(2, '0')} · REST {currentWe.restSeconds}S
-          {currentWe.tempo ? ` · TEMPO ${currentWe.tempo}` : ''}
-        </Text>
+      {/* Actions */}
+      {phase === 'done' ? (
+        <Pressable style={styles.btn} onPress={() => router.back()}>
+          <Text style={styles.btnText}>Done</Text>
+        </Pressable>
+      ) : phase === 'rest' ? (
+        <Pressable style={styles.btnOutline} onPress={() => { setRunning(false); setPhase('exercise'); setTimer(0); }}>
+          <Text style={styles.btnOutlineText}>Skip rest</Text>
+        </Pressable>
+      ) : isHold ? (
+        <Pressable style={styles.btn} onPress={() => { setRunning((r) => !r); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); }}>
+          <Text style={styles.btnText}>{running ? 'Pause' : 'Start hold'}</Text>
+        </Pressable>
+      ) : (
+        <Pressable style={styles.btn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); advance(); }}>
+          <Text style={styles.btnText}>Set complete ✓</Text>
+        </Pressable>
       )}
 
-      {/* Bottom controls */}
-      <View style={styles.controls}>
-        {phase !== 'done' && (
-          <Pressable
-            style={styles.navButton}
-            onPress={() => {
-              if (exerciseIdx > 0 || setIdx > 0) {
-                if (setIdx > 0) {
-                  setSetIdx((s) => s - 1);
-                } else {
-                  setExerciseIdx((e) => e - 1);
-                  setSetIdx(workout.exercises[exerciseIdx - 1].sets - 1);
-                }
-                setPhase('exercise');
-                setTimer(0);
-                setIsRunning(false);
-              }
-            }}>
-            <Text style={styles.navIcon}>◁</Text>
-          </Pressable>
-        )}
-
-        <Pressable style={styles.mainButton} onPress={handleMainAction}>
-          <Text style={styles.mainButtonText}>
-            {phase === 'done'
-              ? 'Finish'
-              : phase === 'rest'
-                ? 'Skip rest'
-                : isHold
-                  ? isRunning
-                    ? '⏸ Pause'
-                    : '▶ Start'
-                  : '✓ Done'}
-          </Text>
-        </Pressable>
-
-        {phase !== 'done' && (
-          <Pressable style={styles.navButton} onPress={handleMainAction}>
-            <Text style={styles.navIcon}>▷</Text>
-          </Pressable>
-        )}
-      </View>
-
       {/* Up next */}
-      {nextExercise && phase !== 'done' && (
+      {next && phase !== 'done' && (
         <View style={styles.upNext}>
-          <Text style={styles.upNextLabel}>UP NEXT</Text>
-          <Text style={styles.upNextName}>{nextExercise.name}</Text>
-          <Text style={styles.upNextCount}>
-            {String(exerciseIdx + 2).padStart(2, '0')} / {String(totalExercises).padStart(2, '0')}
-          </Text>
+          <Text style={styles.upLabel}>UP NEXT</Text>
+          <Text style={styles.upName}>{next.name}</Text>
         </View>
       )}
     </View>
@@ -263,162 +189,57 @@ export default function ActiveSessionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    paddingHorizontal: spacing.lg,
+  c: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: spacing.lg },
+
+  top: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, gap: spacing.sm },
+  endBtn: {
+    width: 36, height: 36, borderRadius: 999,
+    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center', justifyContent: 'center',
   },
-  errorText: {
-    fontFamily: fonts.body,
-    fontSize: 16,
-    color: colors.textSecondary,
-    padding: spacing.lg,
+  endText: { fontSize: 16, color: colors.textSecondary },
+  topTitle: { flex: 1, fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
+  topCount: { fontFamily: fonts.mono, fontSize: 12, color: colors.textMuted },
+
+  progressTrack: { height: 3, backgroundColor: colors.border, borderRadius: 2, marginBottom: spacing.md, overflow: 'hidden' },
+  progressFill: { height: 3, backgroundColor: colors.text, borderRadius: 2 },
+
+  main: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  phaseTag: { fontFamily: fonts.monoMedium, fontSize: 11, letterSpacing: 2, color: colors.textMuted, marginBottom: spacing.xs },
+  exName: { fontFamily: fonts.display, fontSize: 26, color: colors.text, textAlign: 'center', letterSpacing: -0.5, marginBottom: spacing.lg },
+
+  ringWrap: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center' },
+  ringInner: { position: 'absolute', alignItems: 'center' },
+  repWrap: { alignItems: 'center', paddingVertical: spacing.xl },
+  bigNum: { fontFamily: fonts.display, fontSize: 96, color: colors.text, letterSpacing: -4, lineHeight: 100 },
+  bigUnit: { fontFamily: fonts.body, fontSize: 16, color: colors.textMuted, marginTop: -4 },
+
+  dots: { flexDirection: 'row', gap: 10, marginTop: spacing.lg, justifyContent: 'center' },
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  dotDone: { backgroundColor: colors.text },
+  dotCurrent: { backgroundColor: colors.bg, borderWidth: 2, borderColor: colors.text },
+  dotPending: { backgroundColor: colors.border },
+
+  doneTitle: { fontFamily: fonts.display, fontSize: 44, color: colors.text, textAlign: 'center', letterSpacing: -1.5, lineHeight: 48 },
+  doneSub: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted, marginTop: spacing.sm },
+
+  btn: {
+    backgroundColor: colors.buttonBg, borderRadius: radius.full,
+    paddingVertical: 20, alignItems: 'center', marginBottom: spacing.sm,
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  endText: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 12,
-    letterSpacing: 1,
-    color: colors.text,
-  },
-  progressText: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 0.5,
-    color: colors.textSecondary,
-  },
-  logText: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 12,
-    letterSpacing: 1,
-    color: colors.text,
-  },
-  progressBar: {
-    flexDirection: 'row',
-    gap: 3,
-    marginBottom: spacing.xl,
-  },
-  progressSegment: {
-    flex: 1,
-    height: 3,
-    borderRadius: 2,
-  },
-  segmentDone: {
-    backgroundColor: colors.text,
-  },
-  segmentActive: {
-    backgroundColor: colors.accent,
-  },
-  segmentPending: {
-    backgroundColor: colors.border,
-  },
-  mainContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  phaseLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    letterSpacing: 2,
-    color: colors.textSecondary,
+  btnText: { fontFamily: fonts.displayMedium, fontSize: 18, color: colors.buttonText },
+  btnOutline: {
+    borderRadius: radius.full, paddingVertical: 18,
+    alignItems: 'center', borderWidth: 1, borderColor: colors.border,
     marginBottom: spacing.sm,
   },
-  exerciseTitle: {
-    fontFamily: fonts.displayMedium,
-    fontSize: 26,
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  bigNumber: {
-    fontFamily: fonts.display,
-    fontSize: 120,
-    color: colors.text,
-    letterSpacing: -6,
-    lineHeight: 130,
-  },
-  unitLabel: {
-    fontFamily: fonts.serifItalic,
-    fontSize: 20,
-    color: colors.textSecondary,
-    marginTop: -8,
-  },
-  doneTitle: {
-    fontFamily: fonts.display,
-    fontSize: 48,
-    color: colors.text,
-    textAlign: 'center',
-    letterSpacing: -2,
-    lineHeight: 52,
-  },
-  setInfo: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 1,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
-  },
-  controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  navButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navIcon: {
-    fontSize: 18,
-    color: colors.text,
-  },
-  mainButton: {
-    flex: 1,
-    backgroundColor: colors.dark,
-    borderRadius: 999,
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  mainButtonText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 16,
-    color: colors.bg,
-  },
+  btnOutlineText: { fontFamily: fonts.bodyMedium, fontSize: 16, color: colors.textSecondary },
+
   upNext: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border,
   },
-  upNextLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1,
-    color: colors.textMuted,
-  },
-  upNextName: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 14,
-    color: colors.text,
-    flex: 1,
-  },
-  upNextCount: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
+  upLabel: { fontFamily: fonts.monoMedium, fontSize: 9, letterSpacing: 1.5, color: colors.textMuted },
+  upName: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textSecondary, flex: 1 },
 });

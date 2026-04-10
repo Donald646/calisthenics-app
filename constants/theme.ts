@@ -1,49 +1,50 @@
 /**
- * Calisthenics app design tokens.
- * Matches the V1 editorial/cream aesthetic from Paper designs.
+ * Calisthenics app — clean monochrome luxury.
+ * White + black. Premium buttons. DM Sans typography.
  */
 
 export const fonts = {
-  display: 'HostGrotesk_700Bold',
-  displayMedium: 'HostGrotesk_600SemiBold',
-  displayRegular: 'HostGrotesk_500Medium',
-  serif: 'InstrumentSerif_400Regular',
-  serifItalic: 'InstrumentSerif_400Regular_Italic',
+  display: 'DMSans_700Bold',
+  displayMedium: 'DMSans_600SemiBold',
+  displayRegular: 'DMSans_500Medium',
   mono: 'JetBrainsMono_400Regular',
   monoMedium: 'JetBrainsMono_500Medium',
-  body: 'InterTight_400Regular',
-  bodyMedium: 'InterTight_500Medium',
-  bodySemiBold: 'InterTight_600SemiBold',
+  body: 'DMSans_400Regular',
+  bodyMedium: 'DMSans_500Medium',
+  bodySemiBold: 'DMSans_600SemiBold',
 } as const;
 
 export const colors = {
-  // Backgrounds
-  bg: '#F4EEDF',
-  bgCard: '#ECE4D0',
-  bgCardHover: '#E6DDCB',
+  bg: '#FFFFFF',
+  surface: '#F7F7F7',
+  surfaceHigh: '#EFEFEF',
 
-  // Text
-  text: '#1A1712',
-  textSecondary: '#8B7F64',
-  textMuted: '#B0A489',
+  text: '#000000',
+  textSecondary: '#666666',
+  textMuted: '#999999',
 
-  // Accent — terracotta coral
-  accent: '#D9481F',
-  accentSecondary: '#E8A48A',
-  accentMuted: '#F2CFC0',
+  accent: '#000000',
+  accentSoft: '#333333',
 
-  // Borders & dividers
-  border: '#D9CEB3',
-  borderLight: '#E6DDCB',
+  border: '#EBEBEB',
+  borderLight: '#F0F0F0',
 
-  // Functional
-  success: '#3D7A4A',
-  warning: '#C4872B',
-  error: '#C43B2B',
+  success: '#34C759',
+  warning: '#FF9500',
+  error: '#FF3B30',
 
-  // Dark surfaces (workout session, dark cards)
-  dark: '#1A1712',
-  darkMuted: '#2A2720',
+  // Semantic
+  buttonBg: '#000000',
+  buttonText: '#FFFFFF',
+  buttonDisabledBg: '#F0F0F0',
+  buttonDisabledText: '#BBBBBB',
+
+  // Legacy compat
+  bgCard: '#F7F7F7',
+  dark: '#000000',
+  darkMuted: '#1A1A1A',
+  accentBg: '#F7F7F7',
+  accentDim: '#999999',
 } as const;
 
 export const spacing = {
@@ -56,13 +57,14 @@ export const spacing = {
 } as const;
 
 export const radius = {
-  sm: 6,
+  sm: 8,
   md: 12,
-  lg: 20,
+  lg: 16,
+  xl: 24,
   full: 999,
 } as const;
 
-// Backward compat for template components still referencing old exports
+// Backward compat
 export const Colors = {
   light: {
     text: colors.text,
@@ -73,12 +75,12 @@ export const Colors = {
     tabIconSelected: colors.accent,
   },
   dark: {
-    text: '#ECEDEE',
-    background: colors.dark,
-    tint: '#fff',
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: '#fff',
+    text: '#FFFFFF',
+    background: '#000000',
+    tint: '#FFFFFF',
+    icon: '#888888',
+    tabIconDefault: '#666666',
+    tabIconSelected: '#FFFFFF',
   },
 };
 

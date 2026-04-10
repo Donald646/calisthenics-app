@@ -1,7 +1,10 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fonts } from '@/constants/theme';
+import { colors, fonts, spacing, radius } from '@/constants/theme';
+
+const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const TODAY_IDX = 3;
 
 export default function TodayScreen() {
   const insets = useSafeAreaInsets();
@@ -10,264 +13,350 @@ export default function TodayScreen() {
   return (
     <ScrollView
       style={[styles.container, { paddingTop: insets.top }]}
-      contentContainerStyle={styles.content}>
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}>
+
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.dateLine}>THU · APR 09</Text>
-          <Text style={styles.dateLine}>W3 · D2</Text>
+          <Text style={styles.greeting}>Good morning</Text>
+          <Text style={styles.name}>Donald</Text>
+        </View>
+        <View style={styles.streakPill}>
+          <View style={styles.streakDot} />
+          <Text style={styles.streakText}>12 day streak</Text>
         </View>
       </View>
 
-      {/* Greeting */}
-      <View style={styles.greeting}>
-        <Text style={styles.greetingText}>Morning,{'\n'}Donald.</Text>
+      {/* Week strip */}
+      <View style={styles.weekRow}>
+        {WEEK_DAYS.map((day, i) => {
+          const isToday = i === TODAY_IDX;
+          const isDone = i < TODAY_IDX;
+          return (
+            <View key={i} style={[styles.weekDay, isToday && styles.weekDayActive]}>
+              <Text style={[styles.weekLabel, isToday && styles.weekLabelActive]}>{day}</Text>
+              {isDone && <View style={styles.checkDot} />}
+              {isToday && <View style={styles.todayDot} />}
+            </View>
+          );
+        })}
       </View>
 
-      {/* Stats row */}
+      {/* Stats */}
       <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>STREAK</Text>
-          <Text style={styles.statValue}>12d</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>VOLUME</Text>
-          <Text style={styles.statValue}>2.3k</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>PROTOCOL</Text>
-          <Text style={styles.statValue}>38%</Text>
-        </View>
-      </View>
-
-      {/* Today's workout card */}
-      <Pressable
-        style={styles.workoutCard}
-        onPress={() => router.push('/workout/push_int_01')}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.cardLabel}>TODAY · PUSH PROTOCOL</Text>
-          <Text style={styles.cardCount}>03 / 08</Text>
-        </View>
-        <Text style={styles.cardTitle}>Planche{'\n'}Progression.</Text>
-        <View style={styles.cardStats}>
-          <View style={styles.cardStatItem}>
-            <Text style={styles.cardStatLabel}>DURATION</Text>
-            <Text style={styles.cardStatValue}>42 MIN</Text>
+        {[
+          { value: '2.3k', label: 'Volume' },
+          { value: '38%', label: 'Protocol' },
+          { value: '8', label: 'Sessions' },
+        ].map((s, i) => (
+          <View key={i} style={styles.statItem}>
+            <Text style={styles.statValue}>{s.value}</Text>
+            <Text style={styles.statLabel}>{s.label}</Text>
           </View>
-          <View style={styles.cardStatItem}>
-            <Text style={styles.cardStatLabel}>MOVES</Text>
-            <Text style={styles.cardStatValue}>08</Text>
+        ))}
+      </View>
+
+      {/* Today's workout */}
+      <Text style={styles.sectionTitle}>Today's session</Text>
+
+      <View style={styles.workoutCard}>
+        <View style={styles.cardRow}>
+          <Text style={styles.cardTag}>PUSH · INTERMEDIATE</Text>
+          <Text style={styles.cardCounter}>03/08</Text>
+        </View>
+
+        <Text style={styles.cardTitle}>Planche{'\n'}Progression</Text>
+
+        <View style={styles.cardMetaRow}>
+          {[
+            { v: '42', l: 'min' },
+            { v: '8', l: 'moves' },
+            { v: '320', l: 'kcal' },
+          ].map((m, i) => (
+            <View key={i} style={styles.cardMeta}>
+              <Text style={styles.cardMetaVal}>{m.v}</Text>
+              <Text style={styles.cardMetaLabel}>{m.l}</Text>
+            </View>
+          ))}
+        </View>
+
+        <Pressable
+          style={styles.startButton}
+          onPress={() => router.push('/workout/push_int_01')}>
+          <Text style={styles.startButtonText}>Start workout</Text>
+          <Text style={styles.startButtonArrow}>→</Text>
+        </Pressable>
+      </View>
+
+      {/* Recent */}
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Recent</Text>
+        <Pressable>
+          <Text style={styles.seeAll}>See all</Text>
+        </Pressable>
+      </View>
+
+      {[
+        { name: 'Pull Protocol 02', meta: '38 min · 6 moves', day: 'Yesterday', pr: true },
+        { name: 'Legs Day Alpha', meta: '52 min · 9 moves', day: 'Monday', pr: false },
+        { name: 'Rest · Mobility', meta: '18 min', day: 'Sunday', pr: false },
+      ].map((s, i) => (
+        <View key={i} style={styles.recentRow}>
+          <View style={styles.recentLeft}>
+            <Text style={styles.recentName}>{s.name}</Text>
+            <Text style={styles.recentMeta}>{s.meta}</Text>
           </View>
-          <View style={styles.cardStatItem}>
-            <Text style={styles.cardStatLabel}>LEVEL</Text>
-            <Text style={styles.cardStatValue}>INT</Text>
+          <View style={styles.recentRight}>
+            <Text style={styles.recentDay}>{s.day}</Text>
+            {s.pr && (
+              <View style={styles.prBadge}>
+                <Text style={styles.prText}>PR</Text>
+              </View>
+            )}
           </View>
         </View>
-        <View style={styles.cardFooter}>
-          <Text style={styles.beginText}>Begin session</Text>
-          <Text style={styles.arrowText}>→</Text>
-        </View>
-      </Pressable>
+      ))}
 
-      {/* Recent sessions */}
-      <View style={styles.recentHeader}>
-        <Text style={styles.recentTitle}>Recent sessions</Text>
-        <Text style={styles.seeAll}>SEE ALL →</Text>
-      </View>
-
-      <View style={styles.sessionRow}>
-        <Text style={styles.sessionDay}>YSTDY</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.sessionName}>Pull Protocol 02</Text>
-          <Text style={styles.sessionMeta}>06 MOVES · PR × 2</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={styles.sessionTime}>38 MIN</Text>
-          <Text style={styles.sessionMeta}>2,140 KG</Text>
-        </View>
-      </View>
-
-      <View style={styles.sessionRow}>
-        <Text style={styles.sessionDay}>MON</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.sessionName}>Legs Day Alpha</Text>
-          <Text style={styles.sessionMeta}>09 MOVES · PR × 1</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={styles.sessionTime}>52 MIN</Text>
-          <Text style={styles.sessionMeta}>3,480 KG</Text>
-        </View>
-      </View>
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
+  container: { flex: 1, backgroundColor: colors.bg },
+  content: { paddingHorizontal: spacing.lg, paddingBottom: 80 },
+
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    paddingTop: spacing.md,
     marginBottom: spacing.xl,
   },
-  dateLine: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    color: colors.textSecondary,
-  },
   greeting: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  name: {
+    fontFamily: fonts.display,
+    fontSize: 32,
+    color: colors.text,
+    letterSpacing: -0.8,
+  },
+  streakPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  streakDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.text,
+  },
+  streakText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.text,
+  },
+
+  // Week
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
-  greetingText: {
-    fontFamily: fonts.display,
-    fontSize: 48,
-    color: colors.text,
-    lineHeight: 52,
-    letterSpacing: -1.5,
+  weekDay: {
+    width: 40,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: radius.md,
   },
+  weekDayActive: {
+    backgroundColor: colors.text,
+  },
+  weekLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  weekLabelActive: {
+    color: colors.bg,
+  },
+  checkDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.textMuted,
+  },
+  todayDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.bg,
+  },
+
+  // Stats
   statsRow: {
     flexDirection: 'row',
-    gap: spacing.xl,
+    gap: spacing.sm,
     marginBottom: spacing.xl,
   },
   statItem: {
-    gap: spacing.xs,
-  },
-  statLabel: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: colors.textSecondary,
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    paddingVertical: 18,
+    paddingHorizontal: spacing.md,
+    gap: 2,
   },
   statValue: {
-    fontFamily: fonts.displayMedium,
-    fontSize: 32,
+    fontFamily: fonts.display,
+    fontSize: 22,
     color: colors.text,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
+  statLabel: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+
+  // Section
+  sectionTitle: {
+    fontFamily: fonts.displayMedium,
+    fontSize: 18,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginTop: spacing.lg,
+  },
+  seeAll: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+
+  // Workout card
   workoutCard: {
-    backgroundColor: colors.dark,
-    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.xl,
     padding: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.sm,
   },
-  cardHeader: {
+  cardRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: spacing.md,
   },
-  cardLabel: {
+  cardTag: {
     fontFamily: fonts.monoMedium,
     fontSize: 10,
     letterSpacing: 1.2,
     color: colors.textMuted,
   },
-  cardCount: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 10,
-    letterSpacing: 1.2,
+  cardCounter: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
     color: colors.textMuted,
   },
   cardTitle: {
-    fontFamily: fonts.serifItalic,
-    fontSize: 40,
-    color: '#F4EEDF',
-    lineHeight: 44,
-    letterSpacing: -0.5,
+    fontFamily: fonts.display,
+    fontSize: 36,
+    color: colors.text,
+    letterSpacing: -1.2,
+    lineHeight: 40,
     marginBottom: spacing.lg,
   },
-  cardStats: {
+  cardMetaRow: {
     flexDirection: 'row',
     gap: spacing.xl,
     marginBottom: spacing.lg,
   },
-  cardStatItem: {
-    gap: spacing.xs,
+  cardMeta: { gap: 1 },
+  cardMetaVal: {
+    fontFamily: fonts.display,
+    fontSize: 20,
+    color: colors.text,
+    letterSpacing: -0.5,
   },
-  cardStatLabel: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 10,
-    letterSpacing: 1.2,
+  cardMetaLabel: {
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.textMuted,
   },
-  cardStatValue: {
-    fontFamily: fonts.displayMedium,
-    fontSize: 18,
-    color: '#F4EEDF',
+  startButton: {
+    backgroundColor: colors.buttonBg,
+    borderRadius: radius.full,
+    paddingVertical: 18,
+    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
-  cardFooter: {
+  startButtonText: {
+    fontFamily: fonts.displayMedium,
+    fontSize: 17,
+    color: colors.buttonText,
+  },
+  startButtonArrow: {
+    fontFamily: fonts.body,
+    fontSize: 18,
+    color: colors.buttonText,
+  },
+
+  // Recent
+  recentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.darkMuted,
-    paddingTop: spacing.md,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  beginText: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: '#F4EEDF',
-  },
-  arrowText: {
-    fontSize: 20,
-    color: '#F4EEDF',
-  },
-  recentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: spacing.md,
-  },
-  recentTitle: {
-    fontFamily: fonts.serifItalic,
-    fontSize: 18,
+  recentLeft: { flex: 1, gap: 2 },
+  recentName: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 16,
     color: colors.text,
   },
-  seeAll: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 11,
-    letterSpacing: 1,
-    color: colors.textSecondary,
-  },
-  sessionRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-  },
-  sessionDay: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    letterSpacing: 0.5,
+  recentMeta: {
+    fontFamily: fonts.body,
+    fontSize: 13,
     color: colors.textMuted,
-    width: 40,
-    paddingTop: 2,
   },
-  sessionName: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 15,
-    color: colors.text,
-  },
-  sessionMeta: {
+  recentRight: { alignItems: 'flex-end', gap: 4 },
+  recentDay: {
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.textSecondary,
-    marginTop: 2,
   },
-  sessionTime: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 15,
-    color: colors.text,
+  prBadge: {
+    backgroundColor: colors.text,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  prText: {
+    fontFamily: fonts.monoMedium,
+    fontSize: 9,
+    color: colors.bg,
+    letterSpacing: 0.5,
   },
 });
-

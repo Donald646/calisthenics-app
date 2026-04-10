@@ -1,10 +1,12 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle as SvgCircle } from 'react-native-svg';
 import { colors, fonts, spacing, radius } from '@/constants/theme';
 import { GlossyButton } from '@/components/glossy-button';
 import { WeekStrip } from '@/components/ui/week-strip';
 import { useAppState } from '@/contexts/app-state';
+import type { WeeklyChallenge } from '@/types/gamification';
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -18,6 +20,40 @@ function getRelativeDay(dateStr: string): string {
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';
   return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'long' });
+}
+
+// ─── Challenge Card with mini progress ring ────────────────
+
+function ChallengeRing({ progress, size = 40 }: { progress: number; size?: number }) {
+  const s = 3;
+  const r = (size - s) / 2;
+  const circ = 2 * Math.PI * r;
+  return (
+    <Svg width={size} height={size} style={{ transform: [{ rotate: '-90deg' }] }}>
+      <SvgCircle cx={size / 2} cy={size / 2} r={r} stroke={colors.border} strokeWidth={s} fill="none" />
+      <SvgCircle cx={size / 2} cy={size / 2} r={r} stroke={colors.text} strokeWidth={s} fill="none"
+        strokeDasharray={circ} strokeDashoffset={circ * (1 - Math.min(1, progress))} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+function ChallengeCard({ challenge: c }: { challenge: WeeklyChallenge }) {
+  const progress = c.target > 0 ? c.current / c.target : 0;
+  return (
+    <View style={[styles.challengeCard, c.completed && styles.challengeCardDone]}>
+      <View style={styles.challengeRingWrap}>
+        <ChallengeRing progress={progress} />
+        <Text style={styles.challengeRingText}>
+          {c.completed ? '✓' : `${c.current}`}
+        </Text>
+      </View>
+      <Text style={styles.challengeName} numberOfLines={1}>{c.title}</Text>
+      <Text style={styles.challengeDesc} numberOfLines={2}>{c.description}</Text>
+      <View style={styles.challengeXPBadge}>
+        <Text style={styles.challengeXPText}>+{c.xpReward} XP</Text>
+      </View>
+    </View>
+  );
 }
 
 export default function TodayScreen() {
@@ -98,15 +134,12 @@ export default function TodayScreen() {
             <Text style={styles.sectionTitle}>Challenges</Text>
             <Text style={styles.sectionMeta}>This week</Text>
           </View>
-          {gam.weeklyChallenges.map((c) => (
-            <View key={c.id} style={[styles.challengeRow, c.completed && styles.challengeRowDone]}>
-              <View style={styles.challengeInfo}>
-                <Text style={styles.challengeName}>{c.title}</Text>
-                <Text style={styles.challengeDesc}>{c.current}/{c.target} · {c.description}</Text>
-              </View>
-              <Text style={styles.challengeXP}>+{c.xpReward}</Text>
-            </View>
-          ))}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.challengeScroll}>
+            {gam.weeklyChallenges.map((c) => (
+              <ChallengeCard key={c.id} challenge={c} />
+            ))}
+          </ScrollView>
         </View>
       )}
 
@@ -194,16 +227,26 @@ const styles = StyleSheet.create({
   sectionMeta: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
   seeAll: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textMuted },
 
-  // Challenges
-  challengeRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border,
+  // Challenges — horizontal scroll cards
+  challengeScroll: { gap: spacing.sm, paddingRight: spacing.lg },
+  challengeCard: {
+    width: 160, backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.md, gap: spacing.sm,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  challengeRowDone: { opacity: 0.5 },
-  challengeInfo: { flex: 1, gap: 2 },
-  challengeName: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
-  challengeDesc: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
-  challengeXP: { fontFamily: fonts.monoMedium, fontSize: 12, color: colors.textMuted },
+  challengeCardDone: { backgroundColor: colors.text },
+  challengeRingWrap: { alignItems: 'center', justifyContent: 'center', width: 40, height: 40 },
+  challengeRingText: {
+    position: 'absolute', fontFamily: fonts.display, fontSize: 12, color: colors.text,
+  },
+  challengeName: { fontFamily: fonts.displayMedium, fontSize: 14, color: colors.text },
+  challengeDesc: { fontFamily: fonts.body, fontSize: 11, color: colors.textMuted, lineHeight: 15 },
+  challengeXPBadge: {
+    alignSelf: 'flex-start', backgroundColor: colors.bg,
+    borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  challengeXPText: { fontFamily: fonts.monoMedium, fontSize: 10, color: colors.textMuted },
 
   // Recent
   recentRow: {

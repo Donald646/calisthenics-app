@@ -2,9 +2,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '@/constants/theme';
 import { FilterChips } from '@/components/ui/filter-chips';
 import { sampleWorkouts, getWorkoutsByFocus } from '@/data/workouts';
+import type { Workout } from '@/types';
 
 const FILTERS = [
   { key: 'all', label: 'All' },
@@ -20,44 +22,128 @@ const LEVEL_LABELS: Record<number, string> = {
   1: 'Beginner', 2: 'Foundation', 3: 'Intermediate', 4: 'Advanced', 5: 'Elite',
 };
 
+const FOCUS_GRADIENTS: Record<string, [string, string]> = {
+  push: ['#1A1A1A', '#333333'],
+  pull: ['#1A1A1A', '#2A2A2A'],
+  legs: ['#222222', '#333333'],
+  core: ['#1A1A1A', '#2D2D2D'],
+  skills: ['#111111', '#222222'],
+  full_body: ['#1A1A1A', '#303030'],
+  mobility: ['#222222', '#2A2A2A'],
+};
+
+// ─── Workout Card (compact for horizontal scroll) ───────────
+
+function WorkoutCard({ workout, onPress, size = 'normal' }: {
+  workout: Workout; onPress: () => void; size?: 'normal' | 'hero';
+}) {
+  const isHero = size === 'hero';
+  return (
+    <Pressable
+      style={[styles.card, isHero && styles.cardHero]}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}>
+      {/* Dark gradient header area */}
+      <View style={[styles.cardTop, isHero && styles.cardTopHero]}>
+        <Text style={styles.cardFocus}>
+          {workout.focus.replace('_', ' ').toUpperCase()}
+        </Text>
+        <Text style={[styles.cardName, isHero && styles.cardNameHero]} numberOfLines={2}>
+          {workout.name}
+        </Text>
+      </View>
+      {/* Meta footer */}
+      <View style={styles.cardBottom}>
+        <View style={styles.cardMetaRow}>
+          <Text style={styles.cardMeta}>{workout.estimatedMinutes} min</Text>
+          <View style={styles.dot} />
+          <Text style={styles.cardMeta}>{workout.exercises.length} exercises</Text>
+        </View>
+        <View style={styles.levelPill}>
+          <Text style={styles.levelText}>{LEVEL_LABELS[workout.level]}</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── Section (horizontal scroll row) ────────────────────────
+
+function WorkoutSection({ title, workouts, router }: {
+  title: string; workouts: Workout[]; router: ReturnType<typeof useRouter>;
+}) {
+  if (workouts.length === 0) return null;
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.sectionScroll}>
+        {workouts.map((w) => (
+          <WorkoutCard key={w.id} workout={w}
+            onPress={() => router.push(`/workout/${w.id}`)} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─── Main ───────────────────────────────────────────────────
+
 export default function LibraryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [active, setActive] = useState('all');
 
-  const workouts = getWorkoutsByFocus(active === 'all' ? undefined : active);
+  const isFiltered = active !== 'all';
+  const filteredWorkouts = getWorkoutsByFocus(isFiltered ? active : undefined);
+
+  // Group by focus for browse mode
+  const pushWorkouts = sampleWorkouts.filter((w) => w.focus === 'push');
+  const pullWorkouts = sampleWorkouts.filter((w) => w.focus === 'pull');
+  const legsWorkouts = sampleWorkouts.filter((w) => w.focus === 'legs');
+  const otherWorkouts = sampleWorkouts.filter((w) => !['push', 'pull', 'legs'].includes(w.focus));
+
+  // Featured workout (highest level push)
+  const featured = [...sampleWorkouts].sort((a, b) => b.level - a.level)[0];
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>Library</Text>
+          <Text style={styles.subtitle}>{sampleWorkouts.length} routines</Text>
         </View>
 
+        {/* Filters */}
         <View style={{ marginBottom: spacing.lg }}>
-          <FilterChips chips={FILTERS} activeKey={active} onSelect={setActive} />
+          <FilterChips chips={FILTERS} activeKey={active}
+            onSelect={(k) => { setActive(k); Haptics.selectionAsync(); }} />
         </View>
 
-        <View style={styles.list}>
-          {workouts.map((w) => (
-            <Pressable key={w.id} style={styles.card} onPress={() => router.push(`/workout/${w.id}`)}>
-              <View style={styles.cardTop}>
-                <Text style={styles.cardFocus}>{w.focus.replace('_', ' ').toUpperCase()}</Text>
-                <Text style={styles.cardLevel}>{LEVEL_LABELS[w.level]}</Text>
-              </View>
-              <Text style={styles.cardName}>{w.name}</Text>
-              <View style={styles.cardBottom}>
-                <Text style={styles.cardStat}>{w.estimatedMinutes} min</Text>
-                <View style={styles.dot} />
-                <Text style={styles.cardStat}>{w.exercises.length} exercises</Text>
-                <View style={styles.dot} />
-                <Text style={styles.cardStat}>
-                  {w.equipment.includes('none') ? 'Bodyweight' : w.equipment.length + ' equip'}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+        {isFiltered ? (
+          /* Filtered view — grid */
+          <View style={styles.filteredGrid}>
+            {filteredWorkouts.map((w) => (
+              <WorkoutCard key={w.id} workout={w}
+                onPress={() => router.push(`/workout/${w.id}`)} />
+            ))}
+          </View>
+        ) : (
+          /* Browse view — featured + horizontal sections */
+          <>
+            {/* Featured hero card */}
+            <View style={styles.heroWrap}>
+              <Text style={styles.sectionTitle}>Featured</Text>
+              <WorkoutCard workout={featured} size="hero"
+                onPress={() => router.push(`/workout/${featured.id}`)} />
+            </View>
+
+            {/* Horizontal sections by focus */}
+            <WorkoutSection title="Push" workouts={pushWorkouts} router={router} />
+            <WorkoutSection title="Pull" workouts={pullWorkouts} router={router} />
+            <WorkoutSection title="Legs" workouts={legsWorkouts} router={router} />
+            <WorkoutSection title="Core & Skills" workouts={otherWorkouts} router={router} />
+          </>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -67,18 +153,57 @@ export default function LibraryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md },
-  title: { fontFamily: fonts.display, fontSize: 32, color: colors.text, letterSpacing: -0.8 },
-  list: { paddingHorizontal: spacing.lg, gap: spacing.sm },
-  card: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.sm,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+
+  header: {
+    paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md,
+    flexDirection: 'row', alignItems: 'baseline', gap: spacing.md,
   },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardFocus: { fontFamily: fonts.monoMedium, fontSize: 10, letterSpacing: 1.2, color: colors.textMuted },
-  cardLevel: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
-  cardName: { fontFamily: fonts.displayMedium, fontSize: 22, color: colors.text, letterSpacing: -0.5 },
-  cardBottom: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  cardStat: { fontFamily: fonts.body, fontSize: 13, color: colors.textSecondary },
+  title: { fontFamily: fonts.display, fontSize: 32, color: colors.text, letterSpacing: -0.8 },
+  subtitle: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+
+  // Cards
+  card: {
+    width: 200, borderRadius: radius.lg, overflow: 'hidden',
+    backgroundColor: colors.surface,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
+  },
+  cardHero: { width: '100%' as any },
+  cardTop: {
+    backgroundColor: colors.text, padding: spacing.md, paddingBottom: spacing.lg,
+    minHeight: 100, justifyContent: 'flex-end',
+  },
+  cardTopHero: { minHeight: 140 },
+  cardFocus: {
+    fontFamily: fonts.monoMedium, fontSize: 9, letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.4)', marginBottom: spacing.xs,
+  },
+  cardName: { fontFamily: fonts.display, fontSize: 20, color: '#FFFFFF', letterSpacing: -0.5, lineHeight: 24 },
+  cardNameHero: { fontSize: 28, lineHeight: 32 },
+  cardBottom: {
+    padding: spacing.md, flexDirection: 'row',
+    justifyContent: 'space-between', alignItems: 'center',
+  },
+  cardMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardMeta: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
   dot: { width: 3, height: 3, borderRadius: 2, backgroundColor: colors.textMuted },
+  levelPill: {
+    backgroundColor: colors.surface, borderRadius: radius.full,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  levelText: { fontFamily: fonts.monoMedium, fontSize: 9, letterSpacing: 0.5, color: colors.textMuted },
+
+  // Sections
+  section: { marginBottom: spacing.xl },
+  sectionTitle: {
+    fontFamily: fonts.displayMedium, fontSize: 18, color: colors.text,
+    paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
+  },
+  sectionScroll: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+
+  // Hero
+  heroWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
+
+  // Filtered grid
+  filteredGrid: { paddingHorizontal: spacing.lg, gap: spacing.sm },
 });

@@ -1,31 +1,13 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { OnboardingStep } from '@/components/onboarding-step';
+import { OnboardingStep, OptionCard } from '@/components/onboarding-step';
 import { useOnboarding } from '@/contexts/onboarding';
-import { colors, fonts, spacing } from '@/constants/theme';
 import type { UserGoal } from '@/types';
 
-const GOALS: { value: UserGoal; title: string; desc: string }[] = [
-  {
-    value: 'general_fitness',
-    title: 'General Fitness',
-    desc: 'Build a strong foundation with balanced programming',
-  },
-  {
-    value: 'strength',
-    title: 'Raw Strength',
-    desc: 'Maximize pushing and pulling power through progressive overload',
-  },
-  {
-    value: 'skills',
-    title: 'Unlock Skills',
-    desc: 'Work toward muscle-ups, handstands, planches, and levers',
-  },
-  {
-    value: 'muscle',
-    title: 'Build Muscle',
-    desc: 'Hypertrophy-focused training with higher volume protocols',
-  },
+const GOALS: { value: UserGoal; label: string; sub: string }[] = [
+  { value: 'general_fitness', label: 'General Fitness', sub: 'Balanced strength and conditioning' },
+  { value: 'strength', label: 'Raw Strength', sub: 'Maximize pushing and pulling power' },
+  { value: 'skills', label: 'Unlock Skills', sub: 'Muscle-ups, handstands, planches' },
+  { value: 'muscle', label: 'Build Muscle', sub: 'Higher volume hypertrophy training' },
 ];
 
 export default function GoalScreen() {
@@ -34,61 +16,20 @@ export default function GoalScreen() {
 
   return (
     <OnboardingStep
-      step={1}
-      title="What's your goal?"
-      subtitle="This shapes your program structure and exercise selection."
+      step={3}
+      title="What is your goal?"
+      subtitle="This helps us generate a plan for your training."
       canContinue={data.goal !== ''}
       onContinue={() => router.push('/onboarding/equipment')}>
-      <View style={styles.options}>
-        {GOALS.map((g) => (
-          <Pressable
-            key={g.value}
-            style={[styles.option, data.goal === g.value && styles.optionActive]}
-            onPress={() => update({ goal: g.value })}>
-            <Text style={[styles.optionTitle, data.goal === g.value && styles.optionTitleActive]}>
-              {g.title}
-            </Text>
-            <Text style={[styles.optionDesc, data.goal === g.value && styles.optionDescActive]}>
-              {g.desc}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
+      {GOALS.map((g) => (
+        <OptionCard
+          key={g.value}
+          label={g.label}
+          sublabel={g.sub}
+          selected={data.goal === g.value}
+          onPress={() => update({ goal: g.value })}
+        />
+      ))}
     </OnboardingStep>
   );
 }
-
-const styles = StyleSheet.create({
-  options: {
-    gap: spacing.sm,
-  },
-  option: {
-    padding: spacing.lg,
-    borderRadius: 16,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  optionActive: {
-    backgroundColor: colors.dark,
-    borderColor: colors.dark,
-  },
-  optionTitle: {
-    fontFamily: fonts.displayMedium,
-    fontSize: 18,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  optionTitleActive: {
-    color: colors.bg,
-  },
-  optionDesc: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.textSecondary,
-    lineHeight: 18,
-  },
-  optionDescActive: {
-    color: colors.textMuted,
-  },
-});

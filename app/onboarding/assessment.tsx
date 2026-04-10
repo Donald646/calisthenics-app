@@ -1,92 +1,61 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { OnboardingStep } from '@/components/onboarding-step';
+import { OnboardingStep, OptionCard } from '@/components/onboarding-step';
 import { useOnboarding } from '@/contexts/onboarding';
-import { colors, fonts, spacing } from '@/constants/theme';
+import { colors, fonts, spacing, radius } from '@/constants/theme';
 
 export default function AssessmentScreen() {
   const router = useRouter();
   const { data, update } = useOnboarding();
 
-  const canContinue =
-    data.maxPushUps.length > 0 &&
-    data.maxPullUps.length > 0 &&
-    data.canDip !== null;
+  const canContinue = data.maxPushUps.length > 0 && data.maxPullUps.length > 0 && data.canDip !== null;
 
   return (
     <OnboardingStep
-      step={3}
-      title="Quick assessment."
-      subtitle="Don't overthink it — rough numbers are fine. This places you on the right progression level."
+      step={6}
+      title="Quick fitness check"
+      subtitle="Don't overthink it — rough numbers are fine. This places you on the right level."
       canContinue={canContinue}
-      onContinue={() => router.push('/onboarding/experience')}>
+      onContinue={() => router.push('/onboarding/ready')}>
       <View style={styles.fields}>
         <View style={styles.field}>
-          <Text style={styles.label}>MAX PUSH-UPS WITHOUT STOPPING</Text>
-          <TextInput
-            style={styles.input}
-            value={data.maxPushUps}
-            onChangeText={(v) => update({ maxPushUps: v })}
-            placeholder="0"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>MAX PULL-UPS WITHOUT STOPPING</Text>
-          <TextInput
-            style={styles.input}
-            value={data.maxPullUps}
-            onChangeText={(v) => update({ maxPullUps: v })}
-            placeholder="0"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>MAX SQUAT HOLD (SECONDS)</Text>
-          <TextInput
-            style={styles.input}
-            value={data.maxSquatHoldSeconds}
-            onChangeText={(v) => update({ maxSquatHoldSeconds: v })}
-            placeholder="0"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>CAN YOU DO A FULL DIP?</Text>
-          <View style={styles.chipRow}>
-            <Pressable
-              style={[styles.chip, data.canDip === true && styles.chipActive]}
-              onPress={() => update({ canDip: true })}>
-              <Text style={[styles.chipText, data.canDip === true && styles.chipTextActive]}>
-                Yes
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.chip, data.canDip === false && styles.chipActive]}
-              onPress={() => update({ canDip: false })}>
-              <Text style={[styles.chipText, data.canDip === false && styles.chipTextActive]}>
-                Not yet
-              </Text>
-            </Pressable>
+          <Text style={styles.label}>Max push-ups without stopping</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={data.maxPushUps}
+              onChangeText={(v) => update({ maxPushUps: v.replace(/[^0-9]/g, '') })}
+              placeholder="0"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="number-pad"
+              maxLength={3}
+            />
+            <Text style={styles.unit}>reps</Text>
           </View>
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>L-SIT HOLD (SECONDS) — OPTIONAL</Text>
-          <TextInput
-            style={styles.input}
-            value={data.lSitHoldSeconds}
-            onChangeText={(v) => update({ lSitHoldSeconds: v })}
-            placeholder="0"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-          />
+          <Text style={styles.label}>Max pull-ups without stopping</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={data.maxPullUps}
+              onChangeText={(v) => update({ maxPullUps: v.replace(/[^0-9]/g, '') })}
+              placeholder="0"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="number-pad"
+              maxLength={3}
+            />
+            <Text style={styles.unit}>reps</Text>
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>Can you do a full dip?</Text>
+          <View style={styles.optionRow}>
+            <OptionCard label="Yes" selected={data.canDip === true} onPress={() => update({ canDip: true })} />
+            <OptionCard label="Not yet" selected={data.canDip === false} onPress={() => update({ canDip: false })} />
+          </View>
         </View>
       </View>
     </OnboardingStep>
@@ -94,48 +63,15 @@ export default function AssessmentScreen() {
 }
 
 const styles = StyleSheet.create({
-  fields: {
-    gap: spacing.lg,
+  fields: { gap: spacing.lg },
+  field: { gap: spacing.sm },
+  label: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textSecondary },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg, paddingVertical: 14,
   },
-  field: {
-    gap: spacing.sm,
-  },
-  label: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 10,
-    letterSpacing: 1.5,
-    color: colors.textSecondary,
-  },
-  input: {
-    fontFamily: fonts.displayMedium,
-    fontSize: 24,
-    color: colors.text,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    paddingVertical: 10,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  chip: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 999,
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.dark,
-    borderColor: colors.dark,
-  },
-  chipText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 14,
-    color: colors.text,
-  },
-  chipTextActive: {
-    color: colors.bg,
-  },
+  input: { flex: 1, fontFamily: fonts.display, fontSize: 28, color: colors.text, letterSpacing: -1 },
+  unit: { fontFamily: fonts.body, fontSize: 15, color: colors.textMuted },
+  optionRow: { gap: spacing.sm },
 });

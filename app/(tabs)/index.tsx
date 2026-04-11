@@ -135,6 +135,7 @@ export default function TodayScreen() {
             <Text style={styles.sectionMeta}>This week</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            style={styles.challengeScrollOuter}
             contentContainerStyle={styles.challengeScroll}>
             {gam.weeklyChallenges.map((c) => (
               <ChallengeCard key={c.id} challenge={c} />
@@ -228,7 +229,8 @@ const styles = StyleSheet.create({
   seeAll: { fontFamily: fonts.bodyMedium, fontSize: 14, color: colors.textMuted },
 
   // Challenges — horizontal scroll cards
-  challengeScroll: { gap: spacing.sm, paddingRight: spacing.lg },
+  challengeScrollOuter: { marginHorizontal: -spacing.lg },
+  challengeScroll: { gap: spacing.sm, paddingHorizontal: spacing.lg },
   challengeCard: {
     width: 160, backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.md, gap: spacing.sm,

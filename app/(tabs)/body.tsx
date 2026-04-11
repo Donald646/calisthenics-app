@@ -5,45 +5,91 @@ import Body from 'react-native-body-highlighter';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '@/constants/theme';
 
-// Today's worked muscles — mapped to react-native-body-highlighter slugs
-// intensity 1 = primary, intensity 2 = secondary
-const FRONT_DATA = [
-  { slug: 'chest' as const, intensity: 1 },
-  { slug: 'deltoids' as const, intensity: 1, side: 'left' as const },
-  { slug: 'deltoids' as const, intensity: 1, side: 'right' as const },
-  { slug: 'abs' as const, intensity: 1 },
-  { slug: 'obliques' as const, intensity: 2 },
-  { slug: 'biceps' as const, intensity: 2 },
-  { slug: 'quadriceps' as const, intensity: 1 },
-  { slug: 'forearm' as const, intensity: 2 },
+// ─── Tier System ────────────────────────────────────────────
+// Tiers based on total sets trained — like a loot rarity system
+// intensity 1 = Common (green), 2 = Rare (blue), 3 = Epic (purple), 4 = Legendary (gold)
+
+const TIER_COLORS = ['#4CAF50', '#2196F3', '#9C27B0', '#FF9800'];
+
+interface MuscleTier {
+  name: string;
+  tier: 1 | 2 | 3 | 4;
+  tierName: string;
+  color: string;
+  sets: number;
+  source: string;
+}
+
+function getTier(sets: number): { tier: 1 | 2 | 3 | 4; name: string; color: string } {
+  if (sets >= 12) return { tier: 4, name: 'Legendary', color: '#FF9800' };
+  if (sets >= 8) return { tier: 3, name: 'Epic', color: '#9C27B0' };
+  if (sets >= 4) return { tier: 2, name: 'Rare', color: '#2196F3' };
+  return { tier: 1, name: 'Common', color: '#4CAF50' };
+}
+
+// Simulated muscle data — sets accumulated over time
+const MUSCLE_DATA: { slug: string; name: string; sets: number; source: string; side?: 'front' | 'back' | 'both' }[] = [
+  { slug: 'chest', name: 'Chest', sets: 14, source: 'Pseudo Planche · Push-Up · Dips', side: 'front' },
+  { slug: 'abs', name: 'Abs', sets: 12, source: 'Hollow Body · Plank · Leg Raise', side: 'front' },
+  { slug: 'deltoids', name: 'Deltoids', sets: 10, source: 'Pike Push-Up · Pseudo Planche', side: 'both' },
+  { slug: 'quadriceps', name: 'Quadriceps', sets: 8, source: 'Squats · Split Squat', side: 'front' },
+  { slug: 'triceps', name: 'Triceps', sets: 9, source: 'Diamond Push-Up · Dips', side: 'back' },
+  { slug: 'biceps', name: 'Biceps', sets: 6, source: 'Pull-Up · Tuck Planche', side: 'front' },
+  { slug: 'trapezius', name: 'Trapezius', sets: 5, source: 'Pseudo Planche Lean', side: 'back' },
+  { slug: 'upper-back', name: 'Upper Back', sets: 7, source: 'Pull-Up · Rows', side: 'back' },
+  { slug: 'obliques', name: 'Obliques', sets: 4, source: 'Planche Lean', side: 'front' },
+  { slug: 'forearm', name: 'Forearms', sets: 3, source: 'Dead Hang · Pull-Up', side: 'front' },
+  { slug: 'hamstring', name: 'Hamstrings', sets: 5, source: 'Nordic Curl · RDL', side: 'back' },
+  { slug: 'gluteal', name: 'Glutes', sets: 6, source: 'Glute Bridge · Squat', side: 'back' },
+  { slug: 'calves', name: 'Calves', sets: 3, source: 'Calf Raise', side: 'back' },
+  { slug: 'lower-back', name: 'Lower Back', sets: 4, source: 'Superman Hold', side: 'back' },
 ];
 
-const BACK_DATA = [
-  { slug: 'trapezius' as const, intensity: 2 },
-  { slug: 'upper-back' as const, intensity: 2 },
-  { slug: 'lower-back' as const, intensity: 2 },
-  { slug: 'triceps' as const, intensity: 2 },
-  { slug: 'gluteal' as const, intensity: 2 },
-  { slug: 'hamstring' as const, intensity: 2 },
-  { slug: 'calves' as const, intensity: 2 },
-];
+// Build body highlighter data with tier-based intensities
+const FRONT_DATA = MUSCLE_DATA
+  .filter((m) => m.side === 'front' || m.side === 'both')
+  .map((m) => {
+    const t = getTier(m.sets);
+    return m.slug === 'deltoids'
+      ? [
+          { slug: m.slug as 'deltoids', intensity: t.tier, side: 'left' as const },
+          { slug: m.slug as 'deltoids', intensity: t.tier, side: 'right' as const },
+        ]
+      : [{ slug: m.slug as any, intensity: t.tier }];
+  })
+  .flat();
 
-const MUSCLE_LIST = [
-  { name: 'Chest', role: 'primary' as const, sets: 7, source: 'Pseudo Planche · Scapular Push-Up' },
-  { name: 'Abs', role: 'primary' as const, sets: 9, source: 'Hollow Body · Plank · Tuck Planche' },
-  { name: 'Deltoids', role: 'primary' as const, sets: 8, source: 'Pike Push-Up · Pseudo Planche' },
-  { name: 'Quadriceps', role: 'primary' as const, sets: 4, source: 'Pike Push-Up' },
-  { name: 'Triceps', role: 'secondary' as const, sets: 8, source: 'Diamond Push-Up · Dips' },
-  { name: 'Trapezius', role: 'secondary' as const, sets: 4, source: 'Pseudo Planche Lean' },
-  { name: 'Biceps', role: 'secondary' as const, sets: 5, source: 'Tuck Planche Hold' },
-  { name: 'Obliques', role: 'secondary' as const, sets: 5, source: 'Planche Lean · Pike Push-Up' },
+const BACK_DATA = MUSCLE_DATA
+  .filter((m) => m.side === 'back' || m.side === 'both')
+  .map((m) => {
+    const t = getTier(m.sets);
+    return m.slug === 'deltoids'
+      ? [
+          { slug: m.slug as 'deltoids', intensity: t.tier, side: 'left' as const },
+          { slug: m.slug as 'deltoids', intensity: t.tier, side: 'right' as const },
+        ]
+      : [{ slug: m.slug as any, intensity: t.tier }];
+  })
+  .flat();
+
+// Build sorted muscle list with tiers
+const MUSCLES_WITH_TIERS: MuscleTier[] = MUSCLE_DATA
+  .map((m) => {
+    const t = getTier(m.sets);
+    return { name: m.name, tier: t.tier, tierName: t.name, color: t.color, sets: m.sets, source: m.source };
+  })
+  .sort((a, b) => b.sets - a.sets);
+
+const TIER_LEGEND = [
+  { name: 'Legendary', color: '#FF9800', min: '12+ sets' },
+  { name: 'Epic', color: '#9C27B0', min: '8–11 sets' },
+  { name: 'Rare', color: '#2196F3', min: '4–7 sets' },
+  { name: 'Common', color: '#4CAF50', min: '1–3 sets' },
 ];
 
 export default function BodyScreen() {
   const insets = useSafeAreaInsets();
   const [selected, setSelected] = useState<string | null>(null);
-  const primaryCount = MUSCLE_LIST.filter((m) => m.role === 'primary').length;
-  const secondaryCount = MUSCLE_LIST.filter((m) => m.role === 'secondary').length;
 
   const handlePress = (part: { slug?: string }) => {
     if (!part.slug) return;
@@ -51,9 +97,10 @@ export default function BodyScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  const selectedInfo = selected
-    ? MUSCLE_LIST.find((m) => m.name.toLowerCase().replace(' ', '-') === selected || m.name.toLowerCase() === selected)
+  const selectedMuscle = selected
+    ? MUSCLE_DATA.find((m) => m.slug === selected)
     : null;
+  const selectedTier = selectedMuscle ? getTier(selectedMuscle.sets) : null;
 
   return (
     <ScrollView
@@ -62,22 +109,6 @@ export default function BodyScreen() {
       showsVerticalScrollIndicator={false}>
 
       <Text style={styles.title}>Body</Text>
-
-      {/* Summary */}
-      <View style={styles.summaryRow}>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{primaryCount + secondaryCount}</Text>
-          <Text style={styles.summaryLabel}>muscles</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{primaryCount}</Text>
-          <Text style={styles.summaryLabel}>primary</Text>
-        </View>
-        <View style={styles.summaryItem}>
-          <Text style={styles.summaryValue}>{secondaryCount}</Text>
-          <Text style={styles.summaryLabel}>secondary</Text>
-        </View>
-      </View>
 
       {/* Body figures */}
       <View style={styles.bodyCard}>
@@ -88,7 +119,7 @@ export default function BodyScreen() {
               gender="male"
               side="front"
               scale={0.85}
-              colors={['#000000', '#999999']}
+              colors={TIER_COLORS}
               border="none"
               onBodyPartPress={handlePress}
             />
@@ -100,7 +131,7 @@ export default function BodyScreen() {
               gender="male"
               side="back"
               scale={0.85}
-              colors={['#000000', '#999999']}
+              colors={TIER_COLORS}
               border="none"
               onBodyPartPress={handlePress}
             />
@@ -110,51 +141,45 @@ export default function BodyScreen() {
       </View>
 
       {/* Selected muscle detail */}
-      {selected && (
-        <View style={styles.selectedCard}>
-          <Text style={styles.selectedName}>{selected.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())}</Text>
-          {selectedInfo ? (
-            <View style={styles.selectedDetail}>
-              <Text style={styles.selectedRole}>{selectedInfo.role.toUpperCase()}</Text>
-              <Text style={styles.selectedSets}>{selectedInfo.sets} sets today</Text>
-              <Text style={styles.selectedSource}>{selectedInfo.source}</Text>
+      {selectedMuscle && selectedTier && (
+        <View style={[styles.selectedCard, { borderLeftColor: selectedTier.color }]}>
+          <View style={styles.selectedTop}>
+            <Text style={styles.selectedName}>{selectedMuscle.name}</Text>
+            <View style={[styles.tierBadge, { backgroundColor: selectedTier.color }]}>
+              <Text style={styles.tierBadgeText}>{selectedTier.name}</Text>
             </View>
-          ) : (
-            <Text style={styles.selectedRest}>Not trained today</Text>
-          )}
+          </View>
+          <Text style={styles.selectedSets}>{selectedMuscle.sets} total sets</Text>
+          <Text style={styles.selectedSource}>{selectedMuscle.source}</Text>
         </View>
       )}
 
-      {/* Legend */}
+      {/* Tier legend */}
       <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#000000' }]} />
-          <Text style={styles.legendText}>Primary</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#999999' }]} />
-          <Text style={styles.legendText}>Secondary</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#E8E8E8' }]} />
-          <Text style={styles.legendText}>Rest</Text>
-        </View>
+        {TIER_LEGEND.map((t) => (
+          <View key={t.name} style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: t.color }]} />
+            <Text style={styles.legendName}>{t.name}</Text>
+            <Text style={styles.legendMin}>{t.min}</Text>
+          </View>
+        ))}
       </View>
 
-      {/* Breakdown */}
+      {/* Muscle breakdown */}
       <Text style={styles.sectionTitle}>Muscle breakdown</Text>
-      {MUSCLE_LIST.map((m, i) => (
-        <View key={i} style={styles.muscleRow}>
-          <View style={styles.muscleLeft}>
-            <View style={[styles.roleDot, { backgroundColor: m.role === 'primary' ? '#000' : '#999' }]} />
-            <View style={styles.muscleInfo}>
+      {MUSCLES_WITH_TIERS.map((m) => (
+        <View key={m.name} style={styles.muscleRow}>
+          <View style={[styles.tierStrip, { backgroundColor: m.color }]} />
+          <View style={styles.muscleInfo}>
+            <View style={styles.muscleTop}>
               <Text style={styles.muscleName}>{m.name}</Text>
-              <Text style={styles.muscleSource}>{m.source}</Text>
+              <View style={[styles.tierPill, { backgroundColor: m.color + '20', borderColor: m.color + '40' }]}>
+                <Text style={[styles.tierPillText, { color: m.color }]}>{m.tierName}</Text>
+              </View>
             </View>
+            <Text style={styles.muscleSource}>{m.source}</Text>
           </View>
-          <Text style={[styles.muscleSets, { color: m.role === 'primary' ? colors.text : colors.textMuted }]}>
-            {m.sets} sets
-          </Text>
+          <Text style={styles.muscleSets}>{m.sets}</Text>
         </View>
       ))}
 
@@ -168,15 +193,6 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
   title: { fontFamily: fonts.display, fontSize: 32, color: colors.text, letterSpacing: -0.8, paddingTop: spacing.md, marginBottom: spacing.lg },
 
-  summaryRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  summaryItem: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
-    paddingVertical: 14, paddingHorizontal: spacing.md, gap: 2,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
-  },
-  summaryValue: { fontFamily: fonts.display, fontSize: 22, color: colors.text, letterSpacing: -0.5 },
-  summaryLabel: { fontFamily: fonts.body, fontSize: 11, color: colors.textMuted },
-
   bodyCard: {
     backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.md,
     marginBottom: spacing.md,
@@ -186,32 +202,39 @@ const styles = StyleSheet.create({
   bodyFigure: { alignItems: 'center', gap: spacing.sm },
   bodyLabel: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
 
-  legend: { flexDirection: 'row', justifyContent: 'center', gap: spacing.lg, marginBottom: spacing.xl },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
-
-  sectionTitle: { fontFamily: fonts.displayMedium, fontSize: 18, color: colors.text, marginBottom: spacing.md },
-  muscleRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  muscleLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, flex: 1 },
-  roleDot: { width: 6, height: 6, borderRadius: 3, marginTop: 6 },
-  muscleInfo: { flex: 1, gap: 2 },
-  muscleName: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
-  muscleSource: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
-  muscleSets: { fontFamily: fonts.monoMedium, fontSize: 13 },
-
   selectedCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, marginBottom: spacing.lg,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.md,
+    marginBottom: spacing.md, borderLeftWidth: 4, gap: spacing.xs,
   },
-  selectedName: { fontFamily: fonts.display, fontSize: 20, color: colors.text, marginBottom: 4 },
-  selectedDetail: { gap: 4 },
-  selectedRole: { fontFamily: fonts.monoMedium, fontSize: 10, letterSpacing: 1.2, color: colors.textMuted },
+  selectedTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  selectedName: { fontFamily: fonts.display, fontSize: 20, color: colors.text },
+  tierBadge: { borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 4 },
+  tierBadgeText: { fontFamily: fonts.monoMedium, fontSize: 10, color: '#FFFFFF', letterSpacing: 0.5 },
   selectedSets: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
   selectedSource: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted },
-  selectedRest: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted },
+
+  legend: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    marginBottom: spacing.xl, paddingHorizontal: spacing.xs,
+  },
+  legendItem: { alignItems: 'center', gap: 4 },
+  legendDot: { width: 12, height: 12, borderRadius: 6 },
+  legendName: { fontFamily: fonts.monoMedium, fontSize: 9, letterSpacing: 0.5, color: colors.text },
+  legendMin: { fontFamily: fonts.body, fontSize: 10, color: colors.textMuted },
+
+  sectionTitle: { fontFamily: fonts.displayMedium, fontSize: 18, color: colors.text, marginBottom: spacing.md },
+
+  muscleRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    marginBottom: spacing.sm, overflow: 'hidden',
+  },
+  tierStrip: { width: 4, alignSelf: 'stretch' },
+  muscleInfo: { flex: 1, padding: spacing.md, gap: 2 },
+  muscleTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  muscleName: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
+  tierPill: { borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
+  tierPillText: { fontFamily: fonts.monoMedium, fontSize: 8, letterSpacing: 0.5 },
+  muscleSource: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
+  muscleSets: { fontFamily: fonts.display, fontSize: 20, color: colors.text, paddingRight: spacing.md },
 });

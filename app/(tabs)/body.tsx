@@ -165,23 +165,30 @@ export default function BodyScreen() {
         ))}
       </View>
 
-      {/* Muscle breakdown */}
+      {/* Muscle breakdown — clean list */}
       <Text style={styles.sectionTitle}>Muscle breakdown</Text>
-      {MUSCLES_WITH_TIERS.map((m) => (
-        <View key={m.name} style={styles.muscleRow}>
-          <View style={[styles.tierStrip, { backgroundColor: m.color }]} />
-          <View style={styles.muscleInfo}>
-            <View style={styles.muscleTop}>
+      {MUSCLES_WITH_TIERS.map((m) => {
+        // Progress toward next tier
+        const thresholds = [0, 4, 8, 12, 20];
+        const currentThreshold = thresholds[m.tier - 1];
+        const nextThreshold = thresholds[m.tier] || 20;
+        const tierProgress = (m.sets - currentThreshold) / (nextThreshold - currentThreshold);
+
+        return (
+          <View key={m.name} style={styles.muscleRow}>
+            <View style={styles.muscleMain}>
               <Text style={styles.muscleName}>{m.name}</Text>
-              <View style={[styles.tierPill, { backgroundColor: m.color + '20', borderColor: m.color + '40' }]}>
-                <Text style={[styles.tierPillText, { color: m.color }]}>{m.tierName}</Text>
+              <Text style={[styles.muscleTier, { color: m.color }]}>{m.tierName}</Text>
+            </View>
+            <View style={styles.muscleBarWrap}>
+              <View style={styles.muscleBarTrack}>
+                <View style={[styles.muscleBarFill, { width: `${Math.min(1, tierProgress) * 100}%`, backgroundColor: m.color }]} />
               </View>
             </View>
-            <Text style={styles.muscleSource}>{m.source}</Text>
+            <Text style={[styles.muscleSets, { color: m.color }]}>{m.sets}</Text>
           </View>
-          <Text style={styles.muscleSets}>{m.sets}</Text>
-        </View>
-      ))}
+        );
+      })}
 
       <View style={{ height: 80 }} />
     </ScrollView>
@@ -225,16 +232,14 @@ const styles = StyleSheet.create({
   sectionTitle: { fontFamily: fonts.displayMedium, fontSize: 18, color: colors.text, marginBottom: spacing.md },
 
   muscleRow: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    marginBottom: spacing.sm, overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  tierStrip: { width: 4, alignSelf: 'stretch' },
-  muscleInfo: { flex: 1, padding: spacing.md, gap: 2 },
-  muscleTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  muscleMain: { flex: 1, gap: 1 },
   muscleName: { fontFamily: fonts.bodyMedium, fontSize: 15, color: colors.text },
-  tierPill: { borderRadius: radius.full, paddingHorizontal: 8, paddingVertical: 2, borderWidth: 1 },
-  tierPillText: { fontFamily: fonts.monoMedium, fontSize: 8, letterSpacing: 0.5 },
-  muscleSource: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
-  muscleSets: { fontFamily: fonts.display, fontSize: 20, color: colors.text, paddingRight: spacing.md },
+  muscleTier: { fontFamily: fonts.monoMedium, fontSize: 10, letterSpacing: 0.5 },
+  muscleBarWrap: { width: 60 },
+  muscleBarTrack: { height: 4, backgroundColor: colors.border, borderRadius: 2, overflow: 'hidden' },
+  muscleBarFill: { height: 4, borderRadius: 2 },
+  muscleSets: { fontFamily: fonts.display, fontSize: 18, width: 30, textAlign: 'right' },
 });

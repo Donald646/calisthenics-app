@@ -69,7 +69,8 @@ export default function WorkoutDetailScreen() {
           const detail = we.holdSeconds
             ? `${we.sets} × ${we.holdSeconds}s hold · ${we.restSeconds}s rest${we.tempo ? ` · ${we.tempo}` : ''}`
             : `${we.sets} × ${we.reps} reps · ${we.restSeconds}s rest${we.tempo ? ` · ${we.tempo}` : ''}`;
-          return <ExerciseRow key={we.exerciseId} index={i} name={ex.name} detail={detail} />;
+          return <ExerciseRow key={we.exerciseId} index={i} name={ex.name} detail={detail}
+            onPress={() => router.push(`/exercise/${ex.id}`)} />;
         })}
 
         <View style={{ height: 120 }} />

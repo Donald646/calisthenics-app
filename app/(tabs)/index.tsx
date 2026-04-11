@@ -148,7 +148,7 @@ export default function TodayScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent</Text>
-            <Pressable><Text style={styles.seeAll}>See all</Text></Pressable>
+            <Pressable onPress={() => router.push('/history')}><Text style={styles.seeAll}>See all</Text></Pressable>
           </View>
           {recent.map((s, i) => {
             const w = getWorkout(s.workoutId);

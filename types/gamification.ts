@@ -75,6 +75,23 @@ export interface GamificationState {
   lastSessionDate?: string;
 }
 
+// ─── Personal Records ───────────────────────────────────────
+
+export interface PersonalRecord {
+  exerciseId: string;
+  bestReps?: number;
+  bestHoldSeconds?: number;
+  achievedAt: string; // ISO
+}
+
+export interface NewPR {
+  exerciseId: string;
+  exerciseName: string;
+  type: 'reps' | 'hold';
+  previous: number;
+  current: number;
+}
+
 // ─── Session Summary (for complete screen) ──────────────────
 
 export interface SessionSummary {
@@ -90,4 +107,5 @@ export interface SessionSummary {
   newRank: RankId;
   rankChanged: boolean;
   newBadges: Badge[];
+  newPRs: NewPR[];
 }

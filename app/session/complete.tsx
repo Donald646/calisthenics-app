@@ -90,6 +90,28 @@ export default function SessionCompleteScreen() {
         </View>
       )}
 
+      {/* New PRs */}
+      {summary.newPRs.length > 0 && (
+        <View style={styles.prSection}>
+          <Text style={styles.sectionLabel}>NEW PERSONAL RECORDS 🏆</Text>
+          {summary.newPRs.map((pr, i) => (
+            <View key={i} style={styles.prCard}>
+              <View style={styles.prLeft}>
+                <Text style={styles.prName}>{pr.exerciseName}</Text>
+                <Text style={styles.prDelta}>
+                  {pr.previous > 0
+                    ? `${pr.previous}${pr.type === 'reps' ? ' reps' : 's'} → ${pr.current}${pr.type === 'reps' ? ' reps' : 's'}`
+                    : `First record: ${pr.current}${pr.type === 'reps' ? ' reps' : 's'}`}
+                </Text>
+              </View>
+              <Text style={styles.prValue}>
+                +{pr.current - pr.previous}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* New badges */}
       {summary.newBadges.length > 0 && (
         <View style={styles.badgeSection}>
@@ -172,6 +194,18 @@ const styles = StyleSheet.create({
   rankUpTitle: { fontFamily: fonts.display, fontSize: 22, color: colors.text },
 
   badgeSection: { marginBottom: spacing.lg },
+
+  prSection: { marginBottom: spacing.lg },
+  prCard: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.md, marginBottom: spacing.xs,
+    borderLeftWidth: 4, borderLeftColor: '#FFD700',
+  },
+  prLeft: { flex: 1, gap: 2 },
+  prName: { fontFamily: fonts.displayMedium, fontSize: 16, color: colors.text },
+  prDelta: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted },
+  prValue: { fontFamily: fonts.display, fontSize: 22, color: '#FFB700' },
   sectionLabel: { fontFamily: fonts.monoMedium, fontSize: 10, letterSpacing: 1.5, color: colors.textMuted, marginBottom: spacing.sm },
   badgeCard: {
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,

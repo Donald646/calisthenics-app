@@ -82,15 +82,15 @@ export default function TodayScreen() {
 
       {/* Header — clean, just name + streak */}
       <View style={styles.header}>
-        <View>
+        <Pressable onPress={() => router.push('/profile')}>
           <Text style={styles.greeting}>{getGreeting()}</Text>
           <Text style={styles.name}>{profile.name}</Text>
-        </View>
+        </Pressable>
         {gam.currentStreak > 0 && (
-          <View style={styles.streakPill}>
+          <Pressable onPress={() => router.push('/profile')} style={styles.streakPill}>
             <Text style={styles.streakEmoji}>🔥</Text>
             <Text style={styles.streakText}>{gam.currentStreak}</Text>
-          </View>
+          </Pressable>
         )}
       </View>
 

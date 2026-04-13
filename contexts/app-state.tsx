@@ -1,9 +1,10 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
   UserProfile, UserAssessment, ExperienceLevel, MovementPattern,
   Workout, Program, SessionLog, ExerciseLog, SetLog, EquipmentId, MuscleRole,
 } from '@/types';
-import type { GamificationState, SessionSummary, XPEvent, Badge } from '@/types/gamification';
+import type { GamificationState, SessionSummary, XPEvent, Badge, PersonalRecord, NewPR } from '@/types/gamification';
 import type { OnboardingData } from './onboarding';
 import { derivePerPatternLevels, generateProgram } from '@/data/program-generator';
 import {
@@ -20,6 +21,7 @@ interface AppState {
   currentProgram: Program | null;
   generatedWorkouts: Workout[];
   sessionHistory: SessionLog[];
+  personalRecords: Record<string, PersonalRecord>;
   gamification: GamificationState;
   lastSessionSummary: SessionSummary | null;
 }
@@ -29,6 +31,7 @@ const initialState: AppState = {
   currentProgram: null,
   generatedWorkouts: [],
   sessionHistory: [],
+  personalRecords: {},
   gamification: createDefaultGamificationState(),
   lastSessionSummary: null,
 };
@@ -37,23 +40,61 @@ const initialState: AppState = {
 
 interface AppContextValue {
   state: AppState;
+  hydrated: boolean;
   completeOnboarding: (data: OnboardingData) => void;
+  updateProfile: (partial: Partial<UserProfile>) => void;
   getWorkout: (id: string) => Workout | undefined;
   getTodaysWorkout: () => { workout: Workout; dayLabel: string } | null;
   startSession: (workoutId: string) => void;
   logSet: (exerciseId: string, set: SetLog) => void;
   completeSession: (workoutId: string, totalTimeSeconds: number) => SessionSummary;
   clearSessionSummary: () => void;
+  resetAllData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 // ─── Provider ───────────────────────────────────────────────
 
+const STORAGE_KEY = '@calisthenics/app-state-v1';
+
 export function AppStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
+  const [hydrated, setHydrated] = useState(false);
   // Track in-flight session exercise logs
   const [sessionLogs, setSessionLogs] = useState<ExerciseLog[]>([]);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Hydrate from storage on mount
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as Partial<AppState>;
+          setState((prev) => ({ ...prev, ...parsed, lastSessionSummary: null }));
+        } catch (e) {
+          console.warn('Failed to parse stored state', e);
+        }
+      }
+      setHydrated(true);
+    });
+  }, []);
+
+  // Persist on change (debounced)
+  useEffect(() => {
+    if (!hydrated) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      // Don't save the transient lastSessionSummary
+      const { lastSessionSummary, ...toSave } = state;
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave)).catch((e) => {
+        console.warn('Failed to save state', e);
+      });
+    }, 500);
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, [state, hydrated]);
 
   const completeOnboarding = useCallback((data: OnboardingData) => {
     const assessment: UserAssessment = {
@@ -188,6 +229,49 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // PR detection
+    const newPRs: NewPR[] = [];
+    const updatedPRs = { ...state.personalRecords };
+    for (const log of sessionLogs) {
+      const ex = getExerciseById(log.exerciseId);
+      if (!ex) continue;
+      const existing = updatedPRs[log.exerciseId];
+      // Best reps in this session
+      const bestReps = Math.max(0, ...log.sets.filter((s) => s.completed && s.reps).map((s) => s.reps || 0));
+      const bestHold = Math.max(0, ...log.sets.filter((s) => s.completed && s.holdSeconds).map((s) => s.holdSeconds || 0));
+
+      if (bestReps > 0) {
+        const prevBest = existing?.bestReps || 0;
+        if (bestReps > prevBest) {
+          newPRs.push({
+            exerciseId: log.exerciseId, exerciseName: ex.name,
+            type: 'reps', previous: prevBest, current: bestReps,
+          });
+          updatedPRs[log.exerciseId] = {
+            exerciseId: log.exerciseId,
+            bestReps,
+            bestHoldSeconds: existing?.bestHoldSeconds,
+            achievedAt: now,
+          };
+        }
+      }
+      if (bestHold > 0) {
+        const prevBest = existing?.bestHoldSeconds || 0;
+        if (bestHold > prevBest) {
+          newPRs.push({
+            exerciseId: log.exerciseId, exerciseName: ex.name,
+            type: 'hold', previous: prevBest, current: bestHold,
+          });
+          updatedPRs[log.exerciseId] = {
+            exerciseId: log.exerciseId,
+            bestReps: existing?.bestReps,
+            bestHoldSeconds: bestHold,
+            achievedAt: now,
+          };
+        }
+      }
+    }
+
     const summary: SessionSummary = {
       workoutName: workout?.name || 'Workout',
       workoutFocus: workout?.focus || 'full_body',
@@ -201,6 +285,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       newRank: newRank.id,
       rankChanged: previousRank.id !== newRank.id,
       newBadges,
+      newPRs,
     };
 
     // Update challenges
@@ -221,6 +306,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({
       ...prev,
       sessionHistory: newHistory,
+      personalRecords: updatedPRs,
       lastSessionSummary: summary,
       gamification: {
         ...prev.gamification,
@@ -243,16 +329,32 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, lastSessionSummary: null }));
   }, []);
 
+  const updateProfile = useCallback((partial: Partial<UserProfile>) => {
+    setState((prev) => prev.profile
+      ? { ...prev, profile: { ...prev.profile, ...partial } }
+      : prev
+    );
+  }, []);
+
+  const resetAllData = useCallback(async () => {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    setState(initialState);
+    setSessionLogs([]);
+  }, []);
+
   return (
     <AppContext.Provider value={{
       state,
+      hydrated,
       completeOnboarding,
+      updateProfile,
       getWorkout,
       getTodaysWorkout,
       startSession,
       logSet,
       completeSession,
       clearSessionSummary,
+      resetAllData,
     }}>
       {children}
     </AppContext.Provider>

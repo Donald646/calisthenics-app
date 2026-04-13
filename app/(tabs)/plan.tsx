@@ -95,11 +95,19 @@ function RoutinesView({ router }: { router: ReturnType<typeof useRouter> }) {
       </View>
 
       {isFiltered ? (
-        <View style={styles.filteredList}>
-          {filtered.map((w) => (
-            <WorkoutCard key={w.id} workout={w} onPress={() => router.push(`/workout/${w.id}`)} />
-          ))}
-        </View>
+        filtered.length > 0 ? (
+          <View style={styles.filteredList}>
+            {filtered.map((w) => (
+              <WorkoutCard key={w.id} workout={w} onPress={() => router.push(`/workout/${w.id}`)} />
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>🔍</Text>
+            <Text style={styles.emptyTitle}>No routines found</Text>
+            <Text style={styles.emptySub}>Try a different filter or check back later for new routines.</Text>
+          </View>
+        )
       ) : (
         <>
           <View style={styles.heroWrap}>
@@ -238,6 +246,15 @@ const styles = StyleSheet.create({
   hScroll: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   heroWrap: { paddingHorizontal: spacing.lg, marginBottom: spacing.xl },
   filteredList: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+
+  // Empty state
+  emptyState: {
+    alignItems: 'center', gap: spacing.sm, paddingTop: spacing.xxl * 2,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyEmoji: { fontSize: 36 },
+  emptyTitle: { fontFamily: fonts.displayMedium, fontSize: 18, color: colors.text },
+  emptySub: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
 
   // Exercise list
   exCount: { fontFamily: fonts.body, fontSize: 13, color: colors.textMuted, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },

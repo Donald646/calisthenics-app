@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle as SvgCircle } from 'react-native-svg';
@@ -5,24 +6,47 @@ import { colors, fonts, spacing, radius } from '@/constants/theme';
 import { RadarChart } from '@/components/ui/radar-chart';
 import { useAppState } from '@/contexts/app-state';
 import { getXPToNextRank } from '@/data/gamification';
-import { ProgressBar } from '@/components/ui/progress-bar';
+import { getExerciseById } from '@/data/exercises';
+import type { MovementPattern, SessionLog } from '@/types';
 
 // Each skill axis gets a unique color
-const SKILL_AXES = [
-  { label: 'Push', value: 72, color: '#FF6B6B' },
-  { label: 'Pull', value: 58, color: '#4ECDC4' },
-  { label: 'Legs', value: 65, color: '#45B7D1' },
-  { label: 'Core', value: 80, color: '#96CEB4' },
-  { label: 'Skills', value: 40, color: '#DDA0DD' },
-  { label: 'Mobility', value: 55, color: '#F7DC6F' },
+const AXIS_CONFIG: { label: string; color: string; patterns: MovementPattern[] }[] = [
+  { label: 'Push', color: '#FF6B6B', patterns: ['push_horizontal', 'push_vertical'] },
+  { label: 'Pull', color: '#4ECDC4', patterns: ['pull_horizontal', 'pull_vertical'] },
+  { label: 'Legs', color: '#45B7D1', patterns: ['squat', 'hinge'] },
+  { label: 'Core', color: '#96CEB4', patterns: ['core'] },
+  { label: 'Skills', color: '#DDA0DD', patterns: ['skill'] },
 ];
 
-const PERSONAL_RECORDS = [
-  { exercise: 'Push-Ups', value: '32 reps', date: 'Apr 7', color: '#FF6B6B' },
-  { exercise: 'Pull-Ups', value: '12 reps', date: 'Apr 5', color: '#4ECDC4' },
-  { exercise: 'L-Sit Hold', value: '18 sec', date: 'Apr 3', color: '#DDA0DD' },
-  { exercise: 'Pistol Squat', value: '5 each', date: 'Mar 30', color: '#45B7D1' },
-];
+// Derive axis values from session history
+function computeSkillAxes(sessionHistory: SessionLog[]) {
+  const setsByPattern = new Map<MovementPattern, number>();
+  for (const session of sessionHistory) {
+    for (const exLog of session.exercises) {
+      const ex = getExerciseById(exLog.exerciseId);
+      if (!ex) continue;
+      const completed = exLog.sets.filter((s) => s.completed).length;
+      setsByPattern.set(ex.pattern, (setsByPattern.get(ex.pattern) || 0) + completed);
+    }
+  }
+
+  // Convert to 0-100 scale — 50 sets = max
+  return AXIS_CONFIG.map((axis) => {
+    const total = axis.patterns.reduce((sum, p) => sum + (setsByPattern.get(p) || 0), 0);
+    const value = Math.min(100, (total / 50) * 100);
+    return { label: axis.label, value, color: axis.color };
+  });
+}
+
+function formatPRValue(pr: { bestReps?: number; bestHoldSeconds?: number }): string {
+  if (pr.bestReps) return `${pr.bestReps} reps`;
+  if (pr.bestHoldSeconds) return `${pr.bestHoldSeconds} sec`;
+  return '—';
+}
+
+function formatPRDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 // Mini XP ring
 function XPRing({ progress, size = 64 }: { progress: number; size?: number }) {
@@ -43,6 +67,27 @@ export default function StatsScreen() {
   const { state } = useAppState();
   const gam = state.gamification;
   const rankInfo = getXPToNextRank(gam.totalXP);
+  const hasSessions = state.sessionHistory.length > 0;
+
+  const skillAxes = useMemo(() => computeSkillAxes(state.sessionHistory), [state.sessionHistory]);
+
+  // Top 5 PRs sorted by most recent
+  const prs = useMemo(() => {
+    return Object.values(state.personalRecords)
+      .sort((a, b) => new Date(b.achievedAt).getTime() - new Date(a.achievedAt).getTime())
+      .slice(0, 5)
+      .map((pr) => {
+        const ex = getExerciseById(pr.exerciseId);
+        // Pick color based on pattern
+        const axis = AXIS_CONFIG.find((a) => ex && a.patterns.includes(ex.pattern));
+        return {
+          exercise: ex?.name || pr.exerciseId,
+          value: formatPRValue(pr),
+          date: formatPRDate(pr.achievedAt),
+          color: axis?.color || colors.text,
+        };
+      });
+  }, [state.personalRecords]);
 
   return (
     <ScrollView
@@ -91,21 +136,24 @@ export default function StatsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Strength profile</Text>
         <View style={styles.radarCard}>
-          <RadarChart axes={SKILL_AXES} size={260} />
+          <RadarChart axes={skillAxes} size={260} />
+          {!hasSessions && (
+            <Text style={styles.radarHint}>Train to see your profile fill in</Text>
+          )}
         </View>
       </View>
 
       {/* Colored breakdown bars */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Breakdown</Text>
-        {SKILL_AXES.map((axis) => (
+        {skillAxes.map((axis) => (
           <View key={axis.label} style={styles.barRow}>
             <View style={[styles.barDot, { backgroundColor: axis.color }]} />
             <Text style={styles.barLabel}>{axis.label}</Text>
             <View style={styles.barTrack}>
               <View style={[styles.barFill, { width: `${axis.value}%`, backgroundColor: axis.color }]} />
             </View>
-            <Text style={[styles.barValue, { color: axis.color }]}>{axis.value}</Text>
+            <Text style={[styles.barValue, { color: axis.color }]}>{Math.round(axis.value)}</Text>
           </View>
         ))}
       </View>
@@ -113,7 +161,11 @@ export default function StatsScreen() {
       {/* Personal records */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Personal records</Text>
-        {PERSONAL_RECORDS.map((pr, i) => (
+        {prs.length === 0 ? (
+          <View style={styles.prEmpty}>
+            <Text style={styles.prEmptyText}>No records yet. Start training to set your first PR 🏆</Text>
+          </View>
+        ) : prs.map((pr, i) => (
           <View key={i} style={styles.prRow}>
             <View style={[styles.prAccent, { backgroundColor: pr.color }]} />
             <View style={styles.prInfo}>
@@ -186,6 +238,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
   },
+  radarHint: { fontFamily: fonts.body, fontSize: 12, color: colors.textMuted, marginTop: spacing.sm },
+
+  prEmpty: { paddingVertical: spacing.lg, alignItems: 'center' },
+  prEmptyText: { fontFamily: fonts.body, fontSize: 14, color: colors.textMuted, textAlign: 'center' },
 
   // Colored bars
   barRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: 14 },

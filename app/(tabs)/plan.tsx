@@ -177,6 +177,13 @@ function ExercisesView({ router }: { router: ReturnType<typeof useRouter> }) {
             <Text style={styles.letterText}>{section.title}</Text>
           </View>
         )}
+        ListEmptyComponent={(
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>🔍</Text>
+            <Text style={styles.emptyTitle}>No exercises found</Text>
+            <Text style={styles.emptySub}>Try a different category filter.</Text>
+          </View>
+        )}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 80 }}
         stickySectionHeadersEnabled={false}
